@@ -229,7 +229,7 @@
         <!-- Navigation Menu -->
         <div class="flex-1 overflow-y-auto py-6 px-4 flex flex-col gap-1">
             
-            <a href="#" class="nav-item">
+            <a href="#" class="nav-item" id="nav-leads">
                 <div class="nav-icon-box">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
                 </div>
@@ -237,7 +237,7 @@
             </a>
             
             <!-- Currently Active -->
-            <a href="#" class="nav-item active">
+            <a href="#" class="nav-item active" id="nav-products">
                 <div class="nav-icon-box">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
                 </div>
@@ -246,13 +246,6 @@
 
             <div class="nav-section-title">Your AI</div>
             
-            <a href="#" class="nav-item">
-                <div class="nav-icon-box">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
-                </div>
-                Knowledge Base
-            </a>
-
             <a href="#" class="nav-item">
                 <div class="nav-icon-box">
                     <!-- High-end Sparkle/Bolt icon for Playground -->
@@ -301,8 +294,8 @@
         <!-- Header area for the current page -->
         <header class="glass-panel rounded-[2rem] px-8 py-5 flex justify-between items-center shadow-lg shadow-[#28A745]/5">
             <div>
-                <h1 class="text-2xl font-bold text-[#0F172A] tracking-tight">Products</h1>
-                <p class="text-sm text-[#64748B] font-medium mt-1">Manage the catalog Sasa uses to sell.</p>
+                <h1 id="section-title" class="text-2xl font-bold text-[#0F172A] tracking-tight">Products</h1>
+                <p id="section-description" class="text-sm text-[#64748B] font-medium mt-1">Manage the catalog Sasa uses to sell.</p>
             </div>
             
             <button id="openModalBtn" class="bg-[#28A745] hover:bg-[#208739] text-white px-5 py-2 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-[#28A745]/20"> 
@@ -384,6 +377,76 @@
     </main>
 
     <script src="initSupabase.js"></script>
+    
+    <!-- Global Page Navigation & Header Management -->
+    <script>
+        // Page Configuration
+        const PAGE_CONFIG = {
+            products: {
+                title: 'Products',
+                description: 'Manage the catalog Sasa uses to sell.',
+                navId: 'nav-products'
+            },
+            leads: {
+                title: 'Leads',
+                description: 'Manage and track your sales conversations.',
+                navId: 'nav-leads'
+            }
+        };
+
+        let currentPage = 'products';
+
+        // Update header based on current page
+        function updateHeader(page) {
+            const config = PAGE_CONFIG[page];
+            if (config) {
+                document.getElementById('section-title').textContent = config.title;
+                document.getElementById('section-description').textContent = config.description;
+                currentPage = page;
+            }
+        }
+
+        // Global page switch handler
+        function switchPage(page) {
+            const navItems = document.querySelectorAll('[id^="nav-"]');
+            
+            // Remove active class from all nav items
+            navItems.forEach(item => item.classList.remove('active'));
+            
+            // Add active class to selected page
+            const config = PAGE_CONFIG[page];
+            if (config) {
+                const navItem = document.getElementById(config.navId);
+                if (navItem) navItem.classList.add('active');
+                
+                // Update header
+                updateHeader(page);
+                
+                // Call page-specific renderer
+                if (page === 'products' && typeof renderProductsPage === 'function') {
+                    renderProductsPage();
+                } else if (page === 'leads' && typeof renderLeadsList === 'function') {
+                    renderLeadsList();
+                }
+            }
+        }
+
+        // Setup navigation on DOM ready
+        document.addEventListener('DOMContentLoaded', () => {
+            Object.keys(PAGE_CONFIG).forEach(page => {
+                const config = PAGE_CONFIG[page];
+                const navItem = document.getElementById(config.navId);
+                if (navItem) {
+                    navItem.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        switchPage(page);
+                    });
+                }
+            });
+        });
+    </script>
+    
+    <script src="js/leads.js"></script>
     <script>
         // Simulate high-speed JS injection taking over
         setTimeout(() => {
@@ -396,79 +459,15 @@
             
             setTimeout(() => {
                 skeleton.style.display = 'none';
+                content.classList.add('items-center', 'justify-center'); // Restore centering for products
                 content.classList.remove('opacity-0', 'pointer-events-none');
+                
+                // Initialize with products page
+                switchPage('products');
             }, 300);
 
         }, 2000); 
-    </script>
-    <!-- PRODUCT IMPORTER MODAL -->
-<div id="aiImporterModal" class="fixed inset-0 z-50 flex items-center justify-center hidden p-4">
-    <!-- Backdrop Blur -->
-    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-md"></div>
-    
-    <!-- Modal Content -->
-    <div class="glass-panel w-full max-w-4xl max-h-[80vh] overflow-hidden rounded-[2.5rem] relative flex flex-col shadow-2xl">
-        
-        <!-- Modal Header -->
-        <div class="p-6 border-b border-white/30 flex justify-between items-center bg-white/20">
-            <div>
-                <h2 class="text-xl font-bold text-[#0F172A]">AI Product Importer</h2>
-                <p class="text-xs text-[#64748B]">Upload and verify your product list</p>
-            </div>
-            <div class="flex items-center gap-3">
-                <button id="saveAllBtn" class="hidden bg-[#28A745] hover:bg-[#208739] text-white px-5 py-2 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-[#28A745]/20">
-                    Save All
-                </button>
-                <button onclick="closeImporterModal()" class="text-[#64748B] hover:text-red-500 transition-colors">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
-        </div>
-
-        <!-- Screen 1: Upload Screen -->
-        <div id="screen1" class="flex-1 p-12 flex flex-col items-center justify-center text-center">
-            <div class="w-20 h-20 bg-[#28A745]/10 rounded-3xl flex items-center justify-center mb-6 border border-[#28A745]/20">
-                <svg class="w-10 h-10 text-[#28A745]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-            </div>
-            <h3 class="text-lg font-semibold mb-2">Upload Product Data</h3>
-            <p class="text-sm text-[#64748B] mb-8 max-w-xs">Drop your images here to automatically analyze and import products.</p>
-            <input type="file" id="fileInput" class="hidden" accept="image/*" multiple>
-            <button onclick="document.getElementById('fileInput').click()" class="glass-card px-8 py-3 hover:bg-white/80 transition-all font-medium text-sm border-white">
-                Choose File
-            </button>
-        </div>
-
-        <!-- Screen 2: Results/Edit Screen -->
-        <div id="screen2" class="hidden flex-1 overflow-y-auto p-6">
-            <table class="w-full text-left border-separate border-spacing-y-2">
-               <thead>
-    <tr class="text-[11px] uppercase tracking-wider text-[#94A3B8] font-bold px-4">
-        <th class="pb-2 pl-4 w-16">Preview</th> <th class="pb-2">Product Name</th>
-        <th class="pb-2">Short Desc</th>
-        <th class="pb-2">Price</th>
-    </tr>
-</thead>
-                <tbody id="productRows">
-                    <!-- Rows will be injected here -->
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<!-- CONFIRMATION OVERLAY -->
-<div id="saveConfirmOverlay" class="fixed inset-0 z-[60] flex items-center justify-center hidden p-4">
-    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
-    <div class="glass-card p-8 max-w-sm w-full text-center relative shadow-2xl border-white/50">
-        <p class="text-[#0F172A] font-medium mb-8">Please confirm all info and prices are correct before saving.</p>
-        <div class="flex flex-col gap-3">
-            <button id="finalConfirmBtn" class="w-full bg-[#28A745] text-white py-3 rounded-xl font-bold hover:bg-[#208739] transition-all">Confirm</button>
-            <button id="keepEditingBtn" class="w-full text-[#64748B] py-2 text-sm font-medium hover:text-[#0F172A]">Keep Editing</button>
-        </div>
-    </div>
-</div>
-<script src="js/product.js"></script>
-<script src="js/addproducts.js"></script>
+    </script><script src="js/product.js"></script>
 </body>
 </html>
 

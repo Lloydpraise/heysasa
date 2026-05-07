@@ -172,5 +172,3 @@ function renderListView() {
         </div>
     `;
 }
-
-document.addEventListener('DOMContentLoaded', renderProductsPage);
