@@ -6,6 +6,7 @@
     <link rel="icon" type="image/png" href="images/favicon.png">
     <title>Setup | HeySasa!</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -189,59 +190,7 @@
         <div class="blob blob-2"></div>
     </div>
 
-    <script>
-        function goToStep(num) {
-            document.querySelectorAll('.step-content').forEach(s => s.classList.remove('active'));
-            document.getElementById('step-' + num).classList.add('active');
-        }
-
-        // --- STEP 1 MOCK LOGIC ---
-        let progress = 10;
-        const progressInterval = setInterval(() => {
-            progress += Math.random() * 15;
-            if (progress > 100) {
-                progress = 100;
-                clearInterval(progressInterval);
-                setTimeout(() => goToStep(2), 800);
-            }
-            document.getElementById('progress-bar').style.width = progress + '%';
-            
-            const status = document.getElementById('status-text');
-            if (progress > 30) status.textContent = "Analyzing Products...";
-            if (progress > 60) status.textContent = "Configuring AI Personality...";
-            if (progress > 85) status.textContent = "Finalizing Secure Connection...";
-        }, 600);
-        // --- TOKEN PICKER LOGIC ---
-        const picker = document.getElementById('tier-picker');
-        const priceDisplay = document.getElementById('total-price');
-        const tiers = document.querySelectorAll('.token-tier');
-
-        picker.addEventListener('scroll', () => {
-            let closest = null;
-            let closestDist = Infinity;
-
-            tiers.forEach(tier => {
-                const rect = tier.getBoundingClientRect();
-                const pickerRect = picker.getBoundingClientRect();
-                const dist = Math.abs((rect.top + rect.height/2) - (pickerRect.top + pickerRect.height/2));
-                
-                tier.classList.remove('selected');
-                if (dist < closestDist) {
-                    closestDist = dist;
-                    closest = tier;
-                }
-            });
-
-            if (closest) {
-                closest.classList.add('selected');
-                const sh = closest.getAttribute('data-sh');
-                priceDisplay.textContent = `KSh ${Number(sh).toLocaleString()}.00`;
-            }
-        });
-
-        // Initialize first position
-        picker.scrollTop = 0;
-    </script>
-
+    <script src="initSupabase.js"></script>
+    <script src="getstarted.js"></script>
 </body>
 </html>
