@@ -11,7 +11,7 @@
     <style>
         body {
             font-family: 'Poppins', sans-serif;
-            background-color: #F8FAFC; /* Slightly cooler, cleaner white for premium feel */
+            background-color: #F7FBF9; /* Premium off-white with subtle green tint */
             color: #0F172A; /* Deep slate instead of harsh black */
             overflow: hidden; 
             position: relative;
@@ -43,7 +43,7 @@
             height: 100vh;
             z-index: -1;
             overflow: hidden;
-            background: #F8FAFC;
+            background: #F7FBF9;
         }
         
         .blob {
@@ -52,6 +52,7 @@
             filter: blur(120px); /* Higher blur for smoother gradients */
             opacity: 0.35;
             animation: float 15s infinite ease-in-out alternate;
+            display: none;
         }
 
         .blob-1 {
@@ -88,7 +89,7 @@
 
         /* High-End Glassmorphism */
         .glass-panel {
-            background: rgba(255, 255, 255, 0.45);
+            background: rgba(255, 255, 255, 0.7);
             backdrop-filter: blur(24px); /* Extreme blur */
             -webkit-backdrop-filter: blur(24px);
             border: 1px solid rgba(255, 255, 255, 0.7);
