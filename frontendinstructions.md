@@ -52,3 +52,45 @@ then have a Save All button at the top right of the modal. when clicked it opens
 
 On the products page add an alphabet Slider --> a - z on the right side which allows the user 
 
+### LEADS SECTION.
+
+Whats on the page is just a rough idea of what i have in mind. it should be refined. 
+see how best to arrange the information we are trying to pass, giving the most vital in the list view, and the details in drawers/modals. the chat should be in the modal. let it reflect clearly ai message and user message eg - on left leads message is grey - user message is green and ai message is orange.(both on the right)
+
+There will be a button with "execute next step" right below next step - ideally this should be sent to the follow up ai to figure out when to send it(or the user can decide to send it themselves but by default it should be sent by ai) find a nice way of saying and showing that.
+
+The button at the top right of leads section can be reused as Add Lead. its for manually adding the lead we will figure it out.
+
+On top of the name and phone we might be trying to showcase these sets of info - which the system is already made to draw:
+
+* items we are showing *
+
+Lead Identity: The name pulled from WhatsApp and the phone number.
+
+The "Heat" Badge: A color-coded indicator (e.g., Red for "Hot," Orange for "Warm") derived from the AI's assessment of lead_quality.
+
+Current Stage: A status label (e.g., "Price Inquiry" or "Delivery Setup") that shows where the lead is in the funnel.
+
+Product of Interest: A quick summary of items currently in the cart_state (e.g., "200W Solar Panel").
+
+Intent Preview: A one-sentence snippet of the customer_intent to give immediate context.
+
+2. The Lead Intelligence Drawer (The "Deep Dive")
+When a lead is selected, a slide-over drawer provides the "Strategist" AI's findings:
+
+Customer Intent & Psychology: An explanation of the lead's motivation (e.g., "Looking for a bargain" or "Concerned about warranty").
+
+Next Suggested Action: A specific recommendation on how to move the sale forward based on the next_action_plan.
+
+Trust Markers: Indicators of what helped build rapport, such as a positive response to M-Pesa Till details.
+
+Vibe Check: A summary of the conversation's tone (e.g., "Polite but urgent") to help the owner match the customer's energy.
+
+3. The Action Layer
+To make the dashboard functional rather than just informative, we include:
+
+The "One-Click Nudge": A prominent button that opens a pre-filled WhatsApp link using the next_action_plan text.(for manual) or send the message to the follow up ai(to be queued for auto)
+
+Direct Execution: This allows the owner to send the AI-scripted follow-up immediately without having to type it out themselves.
+
+(by giving this right on the leads section we offer instant value. allow users to understand what is happening with their leads - see them in analytics mode rather than emotional mode which is how they increase changes of closing them.)

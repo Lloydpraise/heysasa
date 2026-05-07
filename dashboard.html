@@ -229,7 +229,7 @@
         <!-- Navigation Menu -->
         <div class="flex-1 overflow-y-auto py-6 px-4 flex flex-col gap-1">
             
-            <a href="#" class="nav-item">
+            <a href="#" class="nav-item" id="nav-leads">
                 <div class="nav-icon-box">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
                 </div>
@@ -237,7 +237,7 @@
             </a>
             
             <!-- Currently Active -->
-            <a href="#" class="nav-item active">
+            <a href="#" class="nav-item active" id="nav-products">
                 <div class="nav-icon-box">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
                 </div>
@@ -246,13 +246,6 @@
 
             <div class="nav-section-title">Your AI</div>
             
-            <a href="#" class="nav-item">
-                <div class="nav-icon-box">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
-                </div>
-                Knowledge Base
-            </a>
-
             <a href="#" class="nav-item">
                 <div class="nav-icon-box">
                     <!-- High-end Sparkle/Bolt icon for Playground -->
@@ -300,8 +293,8 @@
         <!-- Header area for the current page -->
         <header class="glass-panel rounded-[2rem] px-8 py-5 flex justify-between items-center shadow-lg shadow-[#28A745]/5">
             <div>
-                <h1 class="text-2xl font-bold text-[#0F172A] tracking-tight">Products</h1>
-                <p class="text-sm text-[#64748B] font-medium mt-1">Manage the catalog Sasa uses to sell.</p>
+                <h1 id="section-title" class="text-2xl font-bold text-[#0F172A] tracking-tight">Products</h1>
+                <p id="section-description" class="text-sm text-[#64748B] font-medium mt-1">Manage the catalog Sasa uses to sell.</p>
             </div>
             
             <button class="bg-[#28A745] hover:bg-[#208739] text-white px-6 py-3 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-[#28A745]/30 flex items-center gap-2 hover:-translate-y-0.5">
@@ -377,6 +370,76 @@
     </main>
 
     <script src="initSupabase.js"></script>
+    
+    <!-- Global Page Navigation & Header Management -->
+    <script>
+        // Page Configuration
+        const PAGE_CONFIG = {
+            products: {
+                title: 'Products',
+                description: 'Manage the catalog Sasa uses to sell.',
+                navId: 'nav-products'
+            },
+            leads: {
+                title: 'Leads',
+                description: 'Manage and track your sales conversations.',
+                navId: 'nav-leads'
+            }
+        };
+
+        let currentPage = 'products';
+
+        // Update header based on current page
+        function updateHeader(page) {
+            const config = PAGE_CONFIG[page];
+            if (config) {
+                document.getElementById('section-title').textContent = config.title;
+                document.getElementById('section-description').textContent = config.description;
+                currentPage = page;
+            }
+        }
+
+        // Global page switch handler
+        function switchPage(page) {
+            const navItems = document.querySelectorAll('[id^="nav-"]');
+            
+            // Remove active class from all nav items
+            navItems.forEach(item => item.classList.remove('active'));
+            
+            // Add active class to selected page
+            const config = PAGE_CONFIG[page];
+            if (config) {
+                const navItem = document.getElementById(config.navId);
+                if (navItem) navItem.classList.add('active');
+                
+                // Update header
+                updateHeader(page);
+                
+                // Call page-specific renderer
+                if (page === 'products' && typeof renderProductsPage === 'function') {
+                    renderProductsPage();
+                } else if (page === 'leads' && typeof renderLeadsList === 'function') {
+                    renderLeadsList();
+                }
+            }
+        }
+
+        // Setup navigation on DOM ready
+        document.addEventListener('DOMContentLoaded', () => {
+            Object.keys(PAGE_CONFIG).forEach(page => {
+                const config = PAGE_CONFIG[page];
+                const navItem = document.getElementById(config.navId);
+                if (navItem) {
+                    navItem.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        switchPage(page);
+                    });
+                }
+            });
+        });
+    </script>
+    
+    <script src="js/leads.js"></script>
     <script>
         // Simulate high-speed JS injection taking over
         setTimeout(() => {
@@ -389,11 +452,42 @@
             
             setTimeout(() => {
                 skeleton.style.display = 'none';
+                content.classList.add('items-center', 'justify-center'); // Restore centering for products
                 content.classList.remove('opacity-0', 'pointer-events-none');
+                
+                // Initialize with products page
+                switchPage('products');
             }, 300);
 
         }, 2000); 
     </script><script src="js/product.js"></script>
+    <div id="intel-drawer" class="fixed inset-y-0 right-0 w-[400px] glass-panel m-4 rounded-[2rem] z-50 translate-x-[110%] transition-transform duration-500 ease-in-out shadow-2xl border-l border-white/50 flex flex-col">
+    <div class="p-6 border-b border-white/30 flex justify-between items-center">
+        <h2 class="font-bold text-lg text-[#0F172A]">Lead Intelligence</h2>
+        <button onclick="closeDrawers()" class="p-2 hover:bg-black/5 rounded-full transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+    </div>
+    <div id="intel-content" class="flex-1 overflow-y-auto p-6 space-y-6">
+        </div>
+</div>
+
+<div id="chat-drawer" class="fixed inset-y-0 right-0 w-[350px] bg-white/90 backdrop-blur-xl z-[60] translate-x-full transition-transform duration-500 ease-in-out shadow-2xl border-l border-slate-200 flex flex-col">
+    <div class="p-4 bg-[#28A745] text-white flex items-center gap-3">
+        <img src="images/favicon.png" class="w-6 h-6 brightness-0 invert" alt="Sasa">
+        <span class="font-bold text-sm">WhatsApp Transcript</span>
+        <button onclick="toggleChat()" class="ml-auto text-white/80 hover:text-white">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+    </div>
+    <div id="chat-content" class="flex-1 overflow-y-auto p-4 bg-slate-50/50">
+        </div>
+</div>
+
+<style>
+    .drawer-open { transform: translateX(0) !important; }
+    .intel-active { transform: translateX(-360px) !important; } /* Push intel drawer left when chat opens */
+</style>
 </body>
 </html>
 
