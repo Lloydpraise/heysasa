@@ -17,6 +17,10 @@ let searchQuery = ''; // Search state
 function renderProductsPage() {
     const container = document.getElementById('content-area');
     
+    // Remove centering classes to ensure search bar stays at top
+    container.classList.remove('items-center', 'justify-center');
+    container.classList.add('flex-col', 'overflow-y-auto');
+    
     container.innerHTML = `
         <div class="flex flex-col gap-6 w-full max-w-full overflow-x-hidden p-1">
             
@@ -42,9 +46,9 @@ function renderProductsPage() {
                     <button onclick="switchTab('discovered')" class="px-4 sm:px-6 py-2 rounded-xl text-xs font-bold transition-all ${currentTab === 'discovered' ? 'bg-white shadow-sm text-green-600' : 'text-gray-400'}">Discovered</button>
                 </div>
 
-                <!-- View Switcher & Add -->
+                <!-- View Switcher -->
                 <div class="flex items-center gap-3 flex-wrap">
-                    <div class="flex bg-white border border-gray-100 rounded-xl overflow-hidden mr-2">
+                    <div class="flex bg-white border border-gray-100 rounded-xl overflow-hidden">
                         <button onclick="switchView('list')" class="p-2 ${currentView === 'list' ? 'bg-gray-50 text-green-600' : 'text-gray-400'}">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                         </button>
@@ -52,9 +56,6 @@ function renderProductsPage() {
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg>
                         </button>
                     </div>
-                    <button class="bg-[#28A745] text-white px-5 py-2.5 rounded-full text-xs font-bold bouncy shadow-lg shadow-green-100 flex items-center gap-2 whitespace-nowrap">
-                        <span>+ Add Product</span>
-                    </button>
                 </div>
             </div>
 

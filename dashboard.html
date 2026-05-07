@@ -206,6 +206,38 @@
             animation: shimmer 2s infinite linear;
             border-radius: 0.5rem;
         }
+        /* Importer Specific Styles */
+.importer-modal-content {
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+}
+
+.upload-zone {
+    border: 2px dashed #cbd5e1;
+    transition: all 0.3s ease;
+}
+
+.upload-zone:hover {
+    border-color: #28A745;
+    background: rgba(40, 167, 69, 0.05);
+}
+
+.loader-spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #28A745;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+.review-card-dashboard {
+    background: white;
+    border: 1px solid rgba(0,0,0,0.05);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
     </style>
 </head>
 <body class="antialiased h-screen w-screen flex p-4 gap-6">
@@ -298,9 +330,9 @@
                 <p id="section-description" class="text-sm text-[#64748B] font-medium mt-1">Manage the catalog Sasa uses to sell.</p>
             </div>
             
-            <button id="openModalBtn" class="bg-[#28A745] hover:bg-[#208739] text-white px-5 py-2 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-[#28A745]/20"> 
-                Add Product
-            </button>
+            <button id="openModalBtn" onclick="toggleImporterModal()" class="bg-[#28A745] hover:bg-[#208739] text-white px-5 py-2 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-[#28A745]/20"> 
+    Add Product
+</button>
         </header>
 
        <!-- Dynamic Content Panel + Alphabet Slider Wrapper -->
@@ -375,7 +407,7 @@
 
         </div>
     </main>
-
+<script src="js/addproducts.js"></script>
     <script src="initSupabase.js"></script>
     
     <!-- Global Page Navigation & Header Management -->
@@ -431,6 +463,20 @@
             }
         }
 
+        // Toggle Product Importer Modal
+        function toggleImporterModal() {
+            const modal = document.getElementById('product-importer-modal');
+            if (modal) {
+                modal.classList.toggle('hidden');
+                // Add/remove pointer-events-none to prevent blocking interactions when hidden
+                if (modal.classList.contains('hidden')) {
+                    modal.classList.add('pointer-events-none');
+                } else {
+                    modal.classList.remove('pointer-events-none');
+                }
+            }
+        }
+
         // Setup navigation on DOM ready
         document.addEventListener('DOMContentLoaded', () => {
             Object.keys(PAGE_CONFIG).forEach(page => {
@@ -468,7 +514,6 @@
 
         }, 2000); 
     </script><script src="js/product.js"></script>
-<<<<<<< HEAD
     <div id="intel-drawer" class="fixed inset-y-0 right-0 w-[400px] glass-panel m-4 rounded-[2rem] z-50 translate-x-[110%] transition-transform duration-500 ease-in-out shadow-2xl border-l border-white/50 flex flex-col">
     <div class="p-6 border-b border-white/30 flex justify-between items-center">
         <h2 class="font-bold text-lg text-[#0F172A]">Lead Intelligence</h2>
@@ -496,8 +541,63 @@
     .drawer-open { transform: translateX(0) !important; }
     .intel-active { transform: translateX(-360px) !important; } /* Push intel drawer left when chat opens */
 </style>
-=======
->>>>>>> 9f565305870893e281d456bd1dbd58df4924e9ba
+<div id="product-importer-modal" class="fixed inset-0 z-[100] hidden pointer-events-none flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onclick="toggleImporterModal()"></div>
+    
+    <div class="glass-panel w-full max-w-6xl h-[90vh] rounded-[2.5rem] relative z-10 flex flex-col overflow-hidden shadow-2xl">
+        
+        <div class="px-8 py-6 border-b border-white/40 flex justify-between items-center bg-white/30">
+            <div>
+                <h2 class="text-xl font-bold text-[#0F172A] flex items-center gap-3">
+                    <span class="p-2 bg-[#28A745]/10 rounded-lg text-[#28A745]"><i class="fa-solid fa-robot"></i></span>
+                    AI Product Importer
+                </h2>
+                <p class="text-xs text-[#64748B] mt-1 font-medium">Bulk upload images and let Sasa generate the metadata.</p>
+            </div>
+            
+            <button onclick="toggleImporterModal()" class="p-2 hover:bg-black/5 rounded-full transition-colors text-slate-400">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-hidden flex flex-col lg:flex-row">
+            
+            <div class="w-full lg:w-80 border-r border-white/40 p-6 flex flex-col bg-white/10">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-[#94A3B8] mb-4">Upload Queue</h3>
+                
+                <div class="upload-zone rounded-2xl p-6 text-center cursor-pointer mb-4" onclick="document.getElementById('aiFileInput').click()">
+                    <input id="aiFileInput" type="file" accept="image/*" multiple class="hidden">
+                    <div class="w-12 h-12 rounded-full bg-[#28A745]/10 mx-auto mb-3 flex items-center justify-center">
+                        <i class="fa-solid fa-cloud-arrow-up text-[#28A745]"></i>
+                    </div>
+                    <div class="text-sm font-bold text-[#0F172A]">Select Product Images</div>
+                    <p class="text-[10px] text-[#64748B] mt-1">JPG, PNG, or WEBP</p>
+                </div>
+
+                <button id="aiProcessBtn" class="w-full py-3 bg-[#28A745] text-white rounded-xl font-bold hover:bg-[#208739] transition-all shadow-lg shadow-[#28A745]/20 disabled:opacity-50" onclick="startAiProcessing()">
+                    <i class="fa-solid fa-play mr-2"></i> Start Processing
+                </button>
+
+                <div id="aiQueueList" class="mt-6 flex-1 overflow-y-auto space-y-2 pr-2">
+                    <div id="aiEmptyQueueMsg" class="text-center text-[#94A3B8] text-xs py-10 italic">Queue is empty</div>
+                </div>
+            </div>
+
+            <div class="flex-1 p-6 overflow-y-auto bg-slate-50/30">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-sm font-bold text-[#0F172A]">Review & Publish <span id="aiReviewCount" class="bg-[#28A745]/10 text-[#28A745] px-2 py-0.5 rounded text-[10px] ml-2">0</span></h3>
+                </div>
+                
+                <div id="aiReviewContainer" class="grid grid-cols-1 xl:grid-cols-2 gap-6 pb-20">
+                    <div class="col-span-full py-20 text-center opacity-40">
+                        <i class="fa-solid fa-boxes-stacked text-5xl mb-4"></i>
+                        <p class="text-sm font-medium">Processed products will appear here.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 </body>
 </html>
 
