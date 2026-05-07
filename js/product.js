@@ -12,14 +12,30 @@ const mockProducts = [
 
 let currentTab = 'added'; // 'added' or 'discovered'
 let currentView = 'image'; // 'image' or 'list'
+let searchQuery = ''; // Search state
 
 function renderProductsPage() {
     const container = document.getElementById('content-area');
     
     container.innerHTML = `
         <div class="flex flex-col gap-6 w-full max-w-full overflow-x-hidden p-1">
-            <!-- Header Actions: Designed for 75%+ Zoom Accessibility -->
+            
+            <!-- Search & Actions Row -->
             <div class="flex flex-wrap items-center justify-between gap-4">
+                <!-- Search Bar -->
+                <div class="relative flex-1 min-w-[280px]">
+                    <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </span>
+                    <input 
+                        type="text" 
+                        placeholder="Search by title or description..." 
+                        value="${searchQuery}"
+                        oninput="handleSearch(this.value)"
+                        class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 transition-all"
+                    >
+                </div>
+
                 <!-- Tabs -->
                 <div class="flex bg-gray-100 p-1 rounded-2xl w-fit shrink-0">
                     <button onclick="switchTab('added')" class="px-4 sm:px-6 py-2 rounded-xl text-xs font-bold transition-all ${currentTab === 'added' ? 'bg-white shadow-sm text-green-600' : 'text-gray-400'}">Added Products</button>
@@ -50,6 +66,12 @@ function renderProductsPage() {
     `;
 }
 
+// Logic for Search
+function handleSearch(query) {
+    searchQuery = query.toLowerCase();
+    renderProductsPage();
+}
+
 function switchTab(tab) {
     currentTab = tab;
     renderProductsPage();
@@ -60,16 +82,28 @@ function switchView(view) {
     renderProductsPage();
 }
 
+// Helper to filter products based on tab and search query
+function getFilteredProducts() {
+    return mockProducts.filter(p => {
+        const matchesTab = p.status === currentTab;
+        const matchesSearch = p.title.toLowerCase().includes(searchQuery) || 
+                              p.description.toLowerCase().includes(searchQuery);
+        return matchesTab && matchesSearch;
+    });
+}
+
 function renderImageView() {
-    // Limits to 4 products only
-    const filtered = mockProducts.filter(p => p.status === currentTab).slice(0, 4);
+    const filtered = getFilteredProducts();
     
+    if (filtered.length === 0) return `<p class="text-center text-gray-400 py-10">No products found.</p>`;
+
     return `
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             ${filtered.map(p => `
                 <div class="glass-panel rounded-3xl overflow-hidden group transition-all hover:shadow-2xl hover:shadow-gray-200/50 flex flex-col bg-white border border-gray-50">
                     <div class="relative h-52 w-full overflow-hidden bg-gray-100">
-                        <img src="${p.img}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
+                        <!-- loading="lazy" ensures images load only when near the viewport -->
+                        <img src="${p.img}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
                         <div class="absolute top-3 right-3 z-10">
                             <button onclick="document.getElementById('menu-img-${p.id}').classList.toggle('hidden')" onblur="setTimeout(() => document.getElementById('menu-img-${p.id}').classList.add('hidden'), 200)" class="w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center shadow-md hover:bg-white transition-colors">
                                 <span class="text-gray-800 font-bold">⋮</span>
@@ -94,8 +128,9 @@ function renderImageView() {
 }
 
 function renderListView() {
-    // Limits to 4 products only
-    const filtered = mockProducts.filter(p => p.status === currentTab).slice(0, 4);
+    const filtered = getFilteredProducts();
+
+    if (filtered.length === 0) return `<p class="text-center text-gray-400 py-10">No products found.</p>`;
     
     return `
         <div class="glass-panel rounded-3xl overflow-x-auto border border-gray-100 bg-white">
@@ -113,7 +148,7 @@ function renderListView() {
                         <tr class="hover:bg-gray-50/30 transition-colors">
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-4">
-                                    <img src="${p.img}" class="w-12 h-12 rounded-xl object-cover shadow-sm shrink-0">
+                                    <img src="${p.img}" loading="lazy" class="w-12 h-12 rounded-xl object-cover shadow-sm shrink-0">
                                     <span class="font-bold text-sm text-gray-800 truncate max-w-[150px]">${p.title}</span>
                                 </div>
                             </td>
