@@ -160,11 +160,11 @@
         <div class="blob blob-2"></div>
     </div>
 
+    <script src="initSupabase.js"></script>
     <script>
         // --- 1. CONFIGURATION ---
-        const SUPABASE_URL = 'YOUR_URL';
-        const SUPABASE_KEY = 'YOUR_KEY';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Supabase initialization is now in initSupabase.js
+        // Supabase client (supabase) is globally available
 
         const screenLogin = document.getElementById('screen-login');
         const screenOtp = document.getElementById('screen-otp');

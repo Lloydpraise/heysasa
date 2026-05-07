@@ -6,6 +6,7 @@
     <link rel="icon" type="image/png" href="images/favicon.png">
     <title>Setup | HeySasa!</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -231,17 +232,12 @@
             if (progress > 60) status.textContent = "Configuring AI Personality...";
             if (progress > 85) status.textContent = "Finalizing Secure Connection...";
         }, 600);
-
         // --- TOKEN PICKER LOGIC ---
         const picker = document.getElementById('tier-picker');
         const priceDisplay = document.getElementById('total-price');
         const tiers = document.querySelectorAll('.token-tier');
-        const desktopBtns = document.querySelectorAll('.desktop-tier-btn');
 
-        // Mobile Scroll Logic
         picker.addEventListener('scroll', () => {
-            if (picker.offsetParent === null) return; 
-
             let closest = null;
             let closestDist = Infinity;
 
@@ -264,25 +260,8 @@
             }
         });
 
-        // Desktop Buttons Logic
-        desktopBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                desktopBtns.forEach(b => {
-                    b.classList.remove('border-2', 'border-[#28A745]', 'bg-[#28A745]/10', 'text-[#1F2937]');
-                    b.classList.add('border', 'border-gray-200', 'text-gray-500');
-                });
-                
-                btn.classList.remove('border', 'border-gray-200', 'text-gray-500');
-                btn.classList.add('border-2', 'border-[#28A745]', 'bg-[#28A745]/10', 'text-[#1F2937]');
-                
-                const sh = btn.getAttribute('data-sh');
-                priceDisplay.textContent = `KSh ${Number(sh).toLocaleString()}.00`;
-            });
-        });
-
         // Initialize first position
         picker.scrollTop = 0;
-        picker.dispatchEvent(new Event('scroll'));
     </script>
 
 </body>

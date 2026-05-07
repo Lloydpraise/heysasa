@@ -37,4 +37,4 @@ Image | title, description... | Price  on far right (eclipse menu -- delete, edi
 We have 2 Views of products --> List view - focus on tables, 
 image view - focus on images. 
 create using mock data then remove mock data and add supabase.
-
+(copy and paste into gemini it will know how to guide your workflow). also give it the dashboard.html so that it tells you what to change.
