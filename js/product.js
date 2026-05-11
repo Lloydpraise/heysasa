@@ -13,7 +13,8 @@ const mockProducts = [
 let currentTab = 'added'; // 'added' or 'discovered'
 let currentView = 'image'; // 'image' or 'list'
 let searchQuery = ''; // Search state
-let imageObserver = null; // Intersection Observer for lazy loading
+let imageObserver = null; // Intersection Observer for lazy loading images
+let cardObserver = null; // Intersection Observer for scroll animations
 
 // Initialize Intersection Observer for lazy loading images
 function initLazyLoadingObserver() {
@@ -38,11 +39,27 @@ function initLazyLoadingObserver() {
     }, observerOptions);
 }
 
+// Initialize Intersection Observer for staggered card scroll animations
+function initCardAnimationObserver() {
+    const observerOptions = {
+        root: null,
+        rootMargin: '0px 0px -40px 0px', // Trigger slightly before it hits the bottom
+        threshold: 0.1
+    };
+
+    cardObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('card-visible');
+                cardObserver.unobserve(entry.target); // Only animate once
+            }
+        });
+    }, observerOptions);
+}
+
 // Apply lazy loading to all images with data-src attribute
 function applyLazyLoading() {
-    if (!imageObserver) {
-        initLazyLoadingObserver();
-    }
+    if (!imageObserver) initLazyLoadingObserver();
     
     const lazyImages = document.querySelectorAll('img[data-src]');
     lazyImages.forEach(img => {
@@ -50,7 +67,33 @@ function applyLazyLoading() {
     });
 }
 
+// Apply scroll animations to cards
+function applyCardAnimations() {
+    if (!cardObserver) initCardAnimationObserver();
+    
+    const cards = document.querySelectorAll('.animate-card');
+    cards.forEach(card => {
+        cardObserver.observe(card);
+    });
+}
+
 function renderProductsPage() {
+    // Inject dynamic styles strictly for the staggered scroll animations
+    if (!document.getElementById('staggered-scroll-styles')) {
+        const style = document.createElement('style');
+        style.id = 'staggered-scroll-styles';
+        style.innerHTML = `
+            .animate-card { opacity: 0; transform: translateY(40px); transition: opacity 0.5s ease-out, transform 0.5s ease-out !important; }
+            .animate-card .anim-desc { opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease-out 0.3s, transform 0.5s ease-out 0.3s !important; }
+            .animate-card .anim-img { opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease-out 0.6s, transform 0.5s ease-out 0.6s !important; }
+            
+            .animate-card.card-visible { opacity: 1; transform: translateY(0); }
+            .animate-card.card-visible .anim-desc { opacity: 1; transform: translateY(0); }
+            .animate-card.card-visible .anim-img { opacity: 1; transform: translateY(0); }
+        `;
+        document.head.appendChild(style);
+    }
+
     const container = document.getElementById('content-area');
     
     // Remove centering classes to ensure search bar stays at top
@@ -60,9 +103,7 @@ function renderProductsPage() {
     container.innerHTML = `
         <div class="flex flex-col gap-6 w-full max-w-full overflow-x-hidden p-1">
             
-            <!-- Search & Actions Row -->
             <div class="flex flex-wrap items-center justify-between gap-4">
-                <!-- Search Bar -->
                 <div class="relative flex-1 min-w-[280px]">
                     <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
@@ -76,13 +117,11 @@ function renderProductsPage() {
                     >
                 </div>
 
-                <!-- Tabs -->
                 <div class="flex bg-gray-100 p-1 rounded-2xl w-fit shrink-0">
                     <button onclick="switchTab('added')" class="px-4 sm:px-6 py-2 rounded-xl text-xs font-bold transition-all ${currentTab === 'added' ? 'bg-white shadow-sm text-green-600' : 'text-gray-400'}">Added Products</button>
                     <button onclick="switchTab('discovered')" class="px-4 sm:px-6 py-2 rounded-xl text-xs font-bold transition-all ${currentTab === 'discovered' ? 'bg-white shadow-sm text-green-600' : 'text-gray-400'}">Discovered</button>
                 </div>
 
-                <!-- View Switcher -->
                 <div class="flex items-center gap-3 flex-wrap">
                     <div class="flex bg-white border border-gray-100 rounded-xl overflow-hidden">
                         <button onclick="switchView('list')" class="p-2 ${currentView === 'list' ? 'bg-gray-50 text-green-600' : 'text-gray-400'}">
@@ -95,16 +134,16 @@ function renderProductsPage() {
                 </div>
             </div>
 
-            <!-- Product Display Area -->
             <div id="products-grid-container" class="w-full">
                 ${currentView === 'image' ? renderImageView() : renderListView()}
             </div>
         </div>
     `;
     
-    // Initialize lazy loading for images after DOM is rendered
+    // Initialize lazy loading and animations sequentially after DOM renders
     requestAnimationFrame(() => {
         applyLazyLoading();
+        applyCardAnimations();
     });
 }
 
@@ -142,9 +181,8 @@ function renderImageView() {
     return `
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             ${filtered.map(p => `
-                <div class="glass-panel rounded-3xl overflow-hidden group transition-all hover:shadow-2xl hover:shadow-gray-200/50 flex flex-col bg-white border border-gray-50">
-                    <div class="relative h-52 w-full overflow-hidden bg-gray-100">
-                        <!-- Lazy loaded image with fade-in animation -->
+                <div class="animate-card glass-panel rounded-3xl overflow-hidden group hover:shadow-2xl hover:shadow-gray-200/50 flex flex-col bg-white border border-gray-50">
+                    <div class="anim-img relative h-52 w-full overflow-hidden bg-gray-100">
                         <img data-src="${p.img}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 208'%3E%3Crect fill='%23f3f4f6' width='400' height='208'/%3E%3C/svg%3E" alt="${p.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 lazy-image" style="opacity: 0.6;">
                         <div class="absolute top-3 right-3 z-10">
                             <button onclick="document.getElementById('menu-img-${p.id}').classList.toggle('hidden')" onblur="setTimeout(() => document.getElementById('menu-img-${p.id}').classList.add('hidden'), 200)" class="w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center shadow-md hover:bg-white transition-colors">
@@ -161,7 +199,7 @@ function renderImageView() {
                             <h3 class="font-bold text-gray-800 text-sm leading-snug flex-1 truncate">${p.title}</h3>
                             <span class="text-green-600 font-extrabold text-sm whitespace-nowrap">KSh ${p.price}</span>
                         </div>
-                        <p class="text-xs text-gray-400 line-clamp-2 leading-relaxed">${p.description}</p>
+                        <p class="anim-desc text-xs text-gray-400 line-clamp-2 leading-relaxed">${p.description}</p>
                     </div>
                 </div>
             `).join('')}
@@ -187,14 +225,16 @@ function renderListView() {
                 </thead>
                 <tbody class="divide-y divide-gray-50">
                     ${filtered.map(p => `
-                        <tr class="hover:bg-gray-50/30 transition-colors">
+                        <tr class="animate-card hover:bg-gray-50/30 transition-colors">
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-4">
-                                    <img data-src="${p.img}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect fill='%23e5e7eb' width='48' height='48'/%3E%3C/svg%3E" alt="${p.title}" class="w-12 h-12 rounded-xl object-cover shadow-sm shrink-0 lazy-image" style="opacity: 0.6;">
+                                    <div class="anim-img shrink-0">
+                                        <img data-src="${p.img}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect fill='%23e5e7eb' width='48' height='48'/%3E%3C/svg%3E" alt="${p.title}" class="w-12 h-12 rounded-xl object-cover shadow-sm lazy-image" style="opacity: 0.6;">
+                                    </div>
                                     <span class="font-bold text-sm text-gray-800 truncate max-w-[150px]">${p.title}</span>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 text-xs text-gray-500 max-w-xs truncate">${p.description}</td>
+                            <td class="anim-desc px-6 py-4 text-xs text-gray-500 max-w-xs truncate">${p.description}</td>
                             <td class="px-6 py-4 text-right">
                                 <span class="font-bold text-green-600 text-sm whitespace-nowrap">KSh ${p.price}</span>
                             </td>

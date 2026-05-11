@@ -64,7 +64,7 @@ function renderLeadsList() {
                     <div class="px-4 py-2 bg-green-50 text-green-700 rounded-xl text-sm font-semibold border border-green-100">
                         Total Leads: ${filteredLeads.length}
                     </div>
-                    <button onclick="alert('Add Lead modal to be implemented')" class="flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-sm font-semibold shadow-sm transition-all">
+                   <button onclick="openAddLeadModal()" class="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                         Add Lead
                     </button>
@@ -98,14 +98,14 @@ function renderLeadsList() {
                         <span class="px-2.5 py-1 rounded-md text-[10px] font-bold border ${qualityColor} uppercase tracking-wider whitespace-nowrap">
                             ${lead.lead_quality === 'Hot' ? '🔥' : '⚡'} ${lead.lead_quality}
                         </span>
-                        <span class="px-2.5 py-1 rounded-md text-[10px] font-bold border border-blue-200 bg-blue-50 text-blue-600 uppercase tracking-wider whitespace-nowrap">
+                        <span class="px-2.5 py-1 rounded-md text-[10px] font-bold border border-gray-200 bg-gray-50 text-gray-600 uppercase tracking-wider whitespace-nowrap">
                             📍 ${lead.conv_stage}
                         </span>
                     </div>
 
                     <div class="flex-1 text-sm text-gray-600 line-clamp-1 border-l-2 border-gray-100 pl-4">
                         <span class="font-semibold text-gray-800 text-[10px] uppercase tracking-wider block mb-0.5">
-                            Interested In: <span class="text-blue-600">${cartSummary}</span>
+                            Interested In: <span class="text-green-600">${cartSummary}</span>
                         </span>
                         <span class="italic text-gray-500">"${lead.customer_intent}"</span>
                     </div>
@@ -128,18 +128,22 @@ function openLeadIntelligence(id) {
     const intelContent = document.getElementById('intel-content');
 
     intelContent.innerHTML = `
-        <div class="border-b border-gray-100 pb-4 mb-5">
+        <div class="border-b border-gray-100 pb-4 mb-5 relative">
             <h2 class="text-xl font-bold text-gray-900">${lead.name}</h2>
             <p class="text-sm text-gray-500">${lead.phone}</p>
+            <button onclick="openChatDrawer(${lead.id})" class="absolute bottom-4 right-0 flex items-center gap-2 px-4 py-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-full text-xs font-bold transition-all border border-green-200 shadow-sm hover:shadow-md">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"></path></svg>
+                Transcript
+            </button>
         </div>
 
-        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 p-5 rounded-2xl mb-6">
+        <div class="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-100 p-5 rounded-2xl mb-6">
             <div class="flex items-center justify-between mb-2">
-                <span class="flex items-center gap-2 text-[10px] font-bold text-blue-700 uppercase tracking-wider">
+                <span class="flex items-center gap-2 text-[10px] font-bold text-orange-700 uppercase tracking-wider">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                     Suggested Next Action
                 </span>
-                <span class="px-2 py-0.5 bg-blue-100/50 text-blue-700 text-[9px] font-bold rounded uppercase tracking-wider flex items-center gap-1">
+                <span class="px-2 py-0.5 bg-orange-100/50 text-orange-700 text-[9px] font-bold rounded uppercase tracking-wider flex items-center gap-1">
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
                     AI Managed
                 </span>
@@ -148,7 +152,7 @@ function openLeadIntelligence(id) {
             
             <div class="flex flex-col gap-3">
                 <button onclick="alert('Action queued. The Follow-up AI will determine the optimal time to send this message.')" 
-                    class="flex items-center justify-center gap-2 w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-all shadow-md shadow-blue-600/20 group relative overflow-hidden">
+                    class="flex items-center justify-center gap-2 w-full py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-semibold transition-all shadow-md shadow-orange-500/20 group relative overflow-hidden">
                     <div class="absolute inset-0 w-full h-full bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
                     Execute Next Step
@@ -173,7 +177,7 @@ function openLeadIntelligence(id) {
             <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
                 <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Vibe Check</h4>
                 <div class="flex items-start gap-2">
-                    <span class="text-lg">🧭</span>
+                    <span class="text-lg">🔮</span>
                     <p class="text-sm text-gray-700 leading-relaxed italic">"${lead.vibe_check || 'Analysis pending...'}"</p>
                 </div>
             </div>
@@ -188,18 +192,8 @@ function openLeadIntelligence(id) {
             <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
                 <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Trust Markers Hit</h4>
                 <div class="flex flex-wrap gap-2">
-                    ${lead.trust_markers.map(marker => `<span class="px-3 py-1 bg-blue-50 border border-blue-100 rounded-lg text-xs font-medium text-blue-700">${marker}</span>`).join('')}
+                    ${lead.trust_markers.map(marker => `<span class="px-3 py-1 bg-green-50 border border-green-100 rounded-lg text-xs font-medium text-green-700">${marker}</span>`).join('')}
                 </div>
-            </div>
-        </div>
-
-        <div class="mt-8 border-t border-gray-100 pt-6">
-            <h3 class="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
-                Conversation Transcript
-            </h3>
-            <div class="flex flex-col gap-4 bg-gray-50 p-4 rounded-2xl h-[300px] overflow-y-auto border border-gray-100">
-                ${generateChatHTML(lead.transcript)}
             </div>
         </div>
     `;
@@ -238,8 +232,29 @@ function generateChatHTML(transcript) {
     }).join('');
 }
 
+function openChatDrawer(id) {
+    const lead = mockLeads.find(l => l.id === id);
+    const chatContent = document.getElementById('chat-content');
+    
+    chatContent.innerHTML = `
+        <div class="flex flex-col gap-4">
+            ${generateChatHTML(lead.transcript)}
+        </div>
+    `;
+    
+    document.getElementById('chat-drawer').classList.add('drawer-open');
+    document.getElementById('intel-drawer').classList.add('intel-active');
+}
+
+function toggleChat() {
+    document.getElementById('chat-drawer').classList.remove('drawer-open');
+    document.getElementById('intel-drawer').classList.remove('intel-active');
+}
+
 function closeDrawers() {
     document.getElementById('intel-drawer').classList.remove('drawer-open');
+    document.getElementById('chat-drawer').classList.remove('drawer-open');
+    document.getElementById('intel-drawer').classList.remove('intel-active');
 }
 
 function renderLeadsContent() {
