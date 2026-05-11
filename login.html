@@ -161,10 +161,11 @@
     </div>
 
     <script src="initSupabase.js"></script>
+    <script src="js/supabaseClient.js"></script>
     <script>
         // --- 1. CONFIGURATION ---
-        // Supabase initialization is now in initSupabase.js
-        // Supabase client (supabase) is globally available
+        // Supabase initialization in initSupabase.js
+        // All API calls go through supabaseAPI from supabaseClient.js
 
         const screenLogin = document.getElementById('screen-login');
         const screenOtp = document.getElementById('screen-otp');
@@ -179,9 +180,12 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
 
-            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) notify(error.message);
-            else window.location.href = '/dashboard'; 
+            const result = await supabaseAPI.auth.signInWithPassword(email, password);
+            if (!result.success) {
+                notify(result.error.message);
+            } else {
+                window.location.href = '/dashboard'; 
+            }
         });
 
         // Request OTP
@@ -189,9 +193,10 @@
             tempEmail = document.getElementById('email').value;
             if (!tempEmail) return notify("Please enter your email first");
 
-            const { error } = await supabase.auth.signInWithOtp({ email: tempEmail });
-            if (error) notify(error.message);
-            else {
+            const result = await supabaseAPI.auth.signInWithOtp(tempEmail);
+            if (!result.success) {
+                notify(result.error.message);
+            } else {
                 document.getElementById('display-email').textContent = tempEmail;
                 toggleScreens(true);
             }
@@ -203,14 +208,9 @@
             let token = '';
             otpBoxes.forEach(b => token += b.value);
 
-            const { error } = await supabase.auth.verifyOtp({
-                email: tempEmail,
-                token: token,
-                type: 'email'
-            });
-
-            if (error) {
-                notify(error.message);
+            const result = await supabaseAPI.auth.verifyOtp(tempEmail, token, 'email');
+            if (!result.success) {
+                notify(result.error.message);
                 otpBoxes.forEach(b => b.value = '');
                 otpBoxes[0].focus();
             } else {

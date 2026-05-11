@@ -1,8 +1,9 @@
 // ==========================================
 // CONFIGURATION & STATE
 // ==========================================
-// Supabase initialization is assumed to be in initSupabase.js
-// Supabase client (supabase) is globally available
+// Supabase initialization is in initSupabase.js
+// All Supabase API calls are in supabaseClient.js via supabaseAPI
+// This file handles UI logic and calls supabaseAPI methods
 
 // Variables to hold state
 let currentBusinessId = null;
@@ -32,8 +33,9 @@ async function startOnboarding(websiteUrl) {
     try {
         updateProgress(50, "Initializing AI Setup...");
 
-        // Call your Supabase Edge Function (This now returns instantly!)
-        const { data, error } = await supabase.functions.invoke('onboarding-orchestrator', {
+        // Call Supabase Edge Function via supabaseAPI
+        const client = window.getSupabase();
+        const { data, error } = await client.functions.invoke('onboarding-orchestrator', {
             body: { websiteUrl: websiteUrl }
         });
 
@@ -72,14 +74,10 @@ function startConnectionPolling(instanceName) {
     checkConnectionInterval = setInterval(async () => {
         attempts++;
         try {
-            // Check the status from your Supabase DB or a dedicated status Edge Function
-            const { data, error } = await supabase
-                .from('businesses')
-                .select('status')
-                .eq('business_id', currentBusinessId)
-                .single();
+            // Check the status from supabaseAPI
+            const result = await supabaseAPI.db.fetchOne('businesses', currentBusinessId);
 
-            if (data && data.status === 'connected') {
+            if (result.success && result.data.status === 'connected') {
                 clearInterval(checkConnectionInterval);
                 updateProgress(100, "WhatsApp Connected Successfully!");
                 goToStep(3); // Move to the token picker / final step

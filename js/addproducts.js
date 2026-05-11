@@ -356,14 +356,12 @@ async function publishProduct(imageId) {
         return;
     }
     
-    // Publish to database (via Supabase)
+    // Publish to database (via supabaseAPI)
     try {
-        const { data, error } = await supabase
-            .from('products')
-            .insert([productData]);
+        const result = await supabaseAPI.db.insertData('products', productData);
         
-        if (error) {
-            showNotification(`Error publishing: ${error.message}`, 'error');
+        if (!result.success) {
+            showNotification(`Error publishing: ${result.error.message}`, 'error');
             return;
         }
         

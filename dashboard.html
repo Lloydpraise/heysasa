@@ -238,6 +238,28 @@
     border: 1px solid rgba(0,0,0,0.05);
     box-shadow: 0 4px 12px rgba(0,0,0,0.03);
 }
+
+/* Lazy Loading Image Styles */
+.lazy-image {
+    transition: opacity 0.6s ease-in-out;
+}
+
+.lazy-loaded {
+    opacity: 1 !important;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+img[data-src] {
+    animation: fadeIn 0.6s ease-in-out forwards;
+}
     </style>
 </head>
 <body class="antialiased h-screen w-screen flex p-4 gap-6">
@@ -409,6 +431,7 @@
     </main>
 <script src="js/addproducts.js"></script>
     <script src="initSupabase.js"></script>
+    <script src="js/supabaseClient.js"></script>
     
     <!-- Global Page Navigation & Header Management -->
     <script>

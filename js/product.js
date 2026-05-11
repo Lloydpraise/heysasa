@@ -13,6 +13,42 @@ const mockProducts = [
 let currentTab = 'added'; // 'added' or 'discovered'
 let currentView = 'image'; // 'image' or 'list'
 let searchQuery = ''; // Search state
+let imageObserver = null; // Intersection Observer for lazy loading
+
+// Initialize Intersection Observer for lazy loading images
+function initLazyLoadingObserver() {
+    const observerOptions = {
+        root: null, // viewport
+        rootMargin: '50px', // Start loading 50px before image enters viewport
+        threshold: 0.01 // Trigger when even 1% of image is visible
+    };
+
+    imageObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                if (img.dataset.src) {
+                    img.src = img.dataset.src;
+                    img.removeAttribute('data-src');
+                    img.classList.add('lazy-loaded'); // Add class for fade-in animation
+                    imageObserver.unobserve(img);
+                }
+            }
+        });
+    }, observerOptions);
+}
+
+// Apply lazy loading to all images with data-src attribute
+function applyLazyLoading() {
+    if (!imageObserver) {
+        initLazyLoadingObserver();
+    }
+    
+    const lazyImages = document.querySelectorAll('img[data-src]');
+    lazyImages.forEach(img => {
+        imageObserver.observe(img);
+    });
+}
 
 function renderProductsPage() {
     const container = document.getElementById('content-area');
@@ -65,6 +101,11 @@ function renderProductsPage() {
             </div>
         </div>
     `;
+    
+    // Initialize lazy loading for images after DOM is rendered
+    requestAnimationFrame(() => {
+        applyLazyLoading();
+    });
 }
 
 // Logic for Search
@@ -103,8 +144,8 @@ function renderImageView() {
             ${filtered.map(p => `
                 <div class="glass-panel rounded-3xl overflow-hidden group transition-all hover:shadow-2xl hover:shadow-gray-200/50 flex flex-col bg-white border border-gray-50">
                     <div class="relative h-52 w-full overflow-hidden bg-gray-100">
-                        <!-- loading="lazy" ensures images load only when near the viewport -->
-                        <img src="${p.img}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
+                        <!-- Lazy loaded image with fade-in animation -->
+                        <img data-src="${p.img}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 208'%3E%3Crect fill='%23f3f4f6' width='400' height='208'/%3E%3C/svg%3E" alt="${p.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 lazy-image" style="opacity: 0.6;">
                         <div class="absolute top-3 right-3 z-10">
                             <button onclick="document.getElementById('menu-img-${p.id}').classList.toggle('hidden')" onblur="setTimeout(() => document.getElementById('menu-img-${p.id}').classList.add('hidden'), 200)" class="w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center shadow-md hover:bg-white transition-colors">
                                 <span class="text-gray-800 font-bold">⋮</span>
@@ -149,7 +190,7 @@ function renderListView() {
                         <tr class="hover:bg-gray-50/30 transition-colors">
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-4">
-                                    <img src="${p.img}" loading="lazy" class="w-12 h-12 rounded-xl object-cover shadow-sm shrink-0">
+                                    <img data-src="${p.img}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect fill='%23e5e7eb' width='48' height='48'/%3E%3C/svg%3E" alt="${p.title}" class="w-12 h-12 rounded-xl object-cover shadow-sm shrink-0 lazy-image" style="opacity: 0.6;">
                                     <span class="font-bold text-sm text-gray-800 truncate max-w-[150px]">${p.title}</span>
                                 </div>
                             </td>

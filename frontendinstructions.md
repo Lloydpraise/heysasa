@@ -94,3 +94,5 @@ The "One-Click Nudge": A prominent button that opens a pre-filled WhatsApp link 
 Direct Execution: This allows the owner to send the AI-scripted follow-up immediately without having to type it out themselves.
 
 (by giving this right on the leads section we offer instant value. allow users to understand what is happening with their leads - see them in analytics mode rather than emotional mode which is how they increase changes of closing them.)
+
+Make the 
