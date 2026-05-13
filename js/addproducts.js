@@ -7,10 +7,9 @@ window.imageQueue = window.imageQueue || [];
 window.processingInProgress = window.processingInProgress || false;
 window.currentBusinessId = window.currentBusinessId || 'fortunebooks12';
 
-// Standardize local references so the rest of your code works perfectly
-var imageQueue = window.imageQueue;
-var processingInProgress = window.processingInProgress;
-var currentBusinessId = window.currentBusinessId;
+// Note: Local variable declarations removed to prevent conflicts with other scripts
+// Use window.imageQueue, window.processingInProgress, and window.currentBusinessId directly
+
 // Initialize importer on page load
 document.addEventListener('DOMContentLoaded', () => {
     initializeImporter();
@@ -54,7 +53,7 @@ function handleFileSelect(event) {
         const base64String = e.target.result;
         
         // Add to queue (replace existing if present, keeping only one)
-        imageQueue = [{
+        window.imageQueue = [{
             id: Date.now(),
             file: file,
             name: file.name,
@@ -88,7 +87,7 @@ function handleFileSelect(event) {
 function updateQueueDisplay() {
     const queueList = document.getElementById('aiQueueList');
     
-    if (imageQueue.length === 0) {
+    if (window.imageQueue.length === 0) {
         queueList.innerHTML = `<div id="aiEmptyQueueMsg" class="text-center text-[#94A3B8] text-xs py-10 italic">Queue is empty</div>`;
         return;
     }
@@ -98,7 +97,7 @@ function updateQueueDisplay() {
     if (emptyMsg) emptyMsg.remove();
     
     // Display queued images
-    queueList.innerHTML = imageQueue.map((img, index) => `
+    queueList.innerHTML = window.imageQueue.map((img, index) => `
         <div class="flex items-center gap-3 p-3 bg-white/50 rounded-lg border border-white/60 group hover:bg-white/80 transition-all">
             <!-- Image Thumbnail -->
             <div class="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 border border-gray-200">
@@ -141,12 +140,12 @@ function updateQueueDisplay() {
 }
 
 function removeFromQueue(imageId) {
-    imageQueue = imageQueue.filter(img => img.id !== imageId);
+    window.imageQueue = window.imageQueue.filter(img => img.id !== imageId);
     updateQueueDisplay();
     updateReviewCount();
     updateProcessBtn();
     
-    if (imageQueue.length === 0) {
+    if (window.imageQueue.length === 0) {
         showNotification('Image removed from queue', 'info');
     }
 }
@@ -156,24 +155,24 @@ function removeFromQueue(imageId) {
 // ==========================================
 
 async function startAiProcessing() {
-    const businessId = currentBusinessId;
+    const businessId = window.currentBusinessId;
     
-    if (imageQueue.length === 0) {
+    if (window.imageQueue.length === 0) {
         showNotification('No images in queue', 'error');
         return;
     }
     
-    if (processingInProgress) {
+    if (window.processingInProgress) {
         showNotification('Processing already in progress', 'warning');
         return;
     }
     
-    processingInProgress = true;
+    window.processingInProgress = true;
     updateProcessBtn();
     
     // Process each image in queue
-    for (let i = 0; i < imageQueue.length; i++) {
-        const imageItem = imageQueue[i];
+    for (let i = 0; i < window.imageQueue.length; i++) {
+        const imageItem = window.imageQueue[i];
         
         // Update status to processing
         imageItem.status = 'processing';
@@ -205,12 +204,12 @@ async function startAiProcessing() {
         updateQueueDisplay();
     }
     
-    processingInProgress = false;
+    window.processingInProgress = false;
     updateProcessBtn();
     
     // Clear queue after processing
     setTimeout(() => {
-        imageQueue = [];
+        window.imageQueue = [];
         updateQueueDisplay();
     }, 2000);
 }
@@ -353,7 +352,7 @@ async function publishProduct(imageId) {
         description: inputs[1].value,
         category: inputs[2].value,
         price: parseFloat(inputs[3].value),
-        business_id: currentBusinessId
+        business_id: window.currentBusinessId
     };
     
     if (!productData.name.trim()) {
@@ -389,7 +388,7 @@ function updateReviewCount() {
 
 function updateProcessBtn() {
     const btn = document.getElementById('aiProcessBtn');
-    btn.disabled = imageQueue.length === 0 || processingInProgress;
+    btn.disabled = window.imageQueue.length === 0 || window.processingInProgress;
 }
 
 

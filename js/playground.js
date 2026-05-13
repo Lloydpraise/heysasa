@@ -21,8 +21,8 @@ let playgroundState = {
 // 3. The Main Renderer
 function renderPlayground() {
     const contentArea = document.getElementById('content-area');
-    contentArea.classList.remove('items-center', 'justify-center');
-    contentArea.classList.add('flex-row', 'overflow-hidden', 'p-0', 'gap-0');
+    // Clear all positioning and display classes
+    contentArea.className = 'absolute inset-0 p-0 flex flex-row overflow-hidden opacity-100 pointer-events-auto gap-0';
 
     contentArea.innerHTML = `
         <div class="w-1/3 h-full glass-panel border-y-0 border-l-0 rounded-none flex flex-col overflow-hidden bg-white/20">
@@ -72,8 +72,10 @@ function renderPlayground() {
 
             <div class="p-6 bg-white/60 border-t border-white/40">
                 <div id="chat-input-view" class="flex gap-3">
-                    <input type="text" id="pg-user-input" placeholder="Type a customer response..." class="flex-1 bg-white border border-slate-200 rounded-2xl px-5 py-4 text-sm outline-none focus:ring-4 ring-[#28A745]/10 transition-all">
-                    <button onclick="sendPlaygroundMessage()" class="bg-[#28A745] text-white px-8 rounded-2xl font-bold hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-[#28A745]/20">Send</button>
+                    <input type="text" id="pg-user-input" placeholder="What would a customer say..." class="flex-1 bg-white border border-slate-200 rounded-2xl px-5 py-4 text-sm outline-none focus:ring-4 ring-[#28A745]/10 transition-all">
+                    <button onclick="sendPlaygroundMessage()" class="bg-[#28A745] text-white px-6 rounded-2xl font-bold hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-[#28A745]/20 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-send-horizontal-icon lucide-send-horizontal"><path d="M3.714 3.048a.498.498 0 0 0-.683.627l2.843 7.627a2 2 0 0 1 0 1.396l-2.842 7.627a.498.498 0 0 0 .682.627l18-8.5a.5.5 0 0 0 0-.904z"/><path d="M6 12h16"/></svg>
+                    </button>
                 </div>
                 
                 <button id="followup-button-view" onclick="simulateFollowUp()" class="hidden w-full py-4 bg-[#FF8C00] text-white rounded-2xl font-bold text-lg shadow-xl shadow-[#FF8C00]/20 hover:scale-[1.01] active:scale-95 transition-all">
@@ -231,13 +233,13 @@ window.savePlaygroundInstructions = () => {
 window.showPlaygroundToast = (msg, type = "success") => {
     const toast = document.createElement('div');
     const bgColor = type === "success" ? "bg-[#28A745]" : "bg-red-500";
-    toast.className = `fixed bottom-10 left-1/2 -translate-x-1/2 ${bgColor} text-white px-8 py-4 rounded-2xl font-bold shadow-2xl z-[1000] animate-bounce border border-white/20`;
+    toast.className = `fixed top-24 left-1/2 -translate-x-1/2 ${bgColor} text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-lg z-[1000] border border-white/20 animate-in fade-in duration-300`;
     toast.textContent = msg;
     document.body.appendChild(toast);
     setTimeout(() => {
-        toast.classList.replace('animate-bounce', 'fade-out');
-        setTimeout(() => toast.remove(), 500);
-    }, 2500);
+        toast.classList.add('animate-out', 'fade-out', 'duration-300');
+        setTimeout(() => toast.remove(), 300);
+    }, 2000);
 };
 
 // 7. Page Switch Logic
@@ -245,6 +247,8 @@ const originalSwitchPage = window.switchPage;
 window.switchPage = function(page) {
     if (page === 'playground') {
         const config = PAGE_CONFIG[page];
+        const contentArea = document.getElementById('content-area');
+        
         document.querySelectorAll('[id^="nav-"]').forEach(item => item.classList.remove('active'));
         const navItem = document.getElementById(config.navId);
         if (navItem) navItem.classList.add('active');
@@ -252,6 +256,9 @@ window.switchPage = function(page) {
         document.getElementById('section-title').textContent = config.title;
         document.getElementById('section-description').textContent = config.description;
         if(document.getElementById('alpha-strip')) document.getElementById('alpha-strip').classList.add('hidden');
+        
+        // Reset content area to proper flex container
+        contentArea.className = 'absolute inset-0 p-0 flex flex-row overflow-hidden opacity-100 pointer-events-auto gap-0';
         
         renderPlayground();
     } else if (originalSwitchPage) {

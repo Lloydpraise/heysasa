@@ -35,6 +35,12 @@ async function startOnboarding(websiteUrl) {
 
         // Call Supabase Edge Function via supabaseAPI
         const client = window.getSupabase();
+        
+        // Ensure Supabase client is initialized
+        if (!client) {
+            throw new Error('Supabase client not initialized. Check your configuration.');
+        }
+        
         const { data, error } = await client.functions.invoke('onboarding-orchestrator', {
             body: { websiteUrl: websiteUrl }
         });
