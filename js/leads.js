@@ -82,7 +82,7 @@ function renderLeadsList() {
             const cartSummary = lead.cart_state.join(', ');
 
             html += `
-                <div onclick="openLeadIntelligence(${lead.id})" class="bg-white p-5 rounded-2xl border border-gray-100 hover:border-green-400 hover:shadow-md transition-all cursor-pointer group flex flex-col md:flex-row md:items-center gap-4">
+                <div onclick="openLeadIntelligence(${lead.id})" data-sort-name="${lead.name}" class="bg-white p-5 rounded-2xl border border-gray-100 hover:border-green-400 hover:shadow-md transition-all cursor-pointer group flex flex-col md:flex-row md:items-center gap-4">
                     
                     <div class="flex items-center gap-4 min-w-[220px]">
                         <div class="w-12 h-12 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center text-green-700 font-bold text-lg shadow-inner">
@@ -133,7 +133,7 @@ function openLeadIntelligence(id) {
             <p class="text-sm text-gray-500">${lead.phone}</p>
             <button onclick="openChatDrawer(${lead.id})" class="absolute bottom-4 right-0 flex items-center gap-2 px-4 py-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-full text-xs font-bold transition-all border border-green-200 shadow-sm hover:shadow-md">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"></path></svg>
-                Transcript
+                View Chat
             </button>
         </div>
 

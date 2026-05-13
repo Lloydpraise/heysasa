@@ -339,10 +339,6 @@
                 <h1 id="section-title" class="text-2xl font-bold text-[#0F172A] tracking-tight">Analytics</h1>
                 <p id="section-description" class="text-sm text-[#64748B] font-medium mt-1">Overview of your business performance.</p>
             </div>
-            
-            <button id="openModalBtn" onclick="toggleImporterModal()" class="bg-[#28A745] hover:bg-[#208739] text-white px-5 py-2 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-[#28A745]/20"> 
-                Add Product
-            </button>
         </header>
 
        <div class="flex-1 flex gap-4 overflow-hidden">
@@ -393,14 +389,14 @@
                 </div>
             </div>
 
-            <div class="glass-panel w-10 rounded-[2rem] flex flex-col items-center justify-between py-6 text-[11px] font-bold text-[#94A3B8] shadow-lg border-t border-white/80">
+            <div id="alpha-strip" class="glass-panel w-10 rounded-[2rem] flex flex-col items-center justify-between py-6 text-[11px] font-bold text-[#94A3B8] shadow-lg border-t border-white/80 hidden">
                 <style>
                     .alpha-link:hover { color: #28A745; transform: scale(1.2); }
                 </style>
                 <script>
                     const alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
                     alpha.forEach(l => {
-                        document.write(`<a href="#${l}" class="alpha-link transition-all duration-200">${l}</a>`);
+                        document.write(`<a onclick="scrollToLetter('${l}')" class="alpha-link transition-all duration-200 cursor-pointer">${l}</a>`);
                     });
                 </script>
             </div>
@@ -450,6 +446,14 @@
             // Remove active class from all nav items
             navItems.forEach(item => item.classList.remove('active'));
             
+            // Toggle alphabet strip visibility
+            const alphaStrip = document.getElementById('alpha-strip');
+            if (page === 'leads' || page === 'products') {
+                alphaStrip.classList.remove('hidden');
+            } else {
+                alphaStrip.classList.add('hidden');
+            }
+            
             // Add active class to selected page
             const config = PAGE_CONFIG[page];
             if (config) {
@@ -495,6 +499,23 @@
             }
         }
 
+        // Scroll to letter in current list
+        function scrollToLetter(letter) {
+            const contentArea = document.getElementById('content-area');
+            if (!contentArea) return;
+            
+            // Find elements that start with the letter (case-insensitive)
+            const elements = contentArea.querySelectorAll('[data-sort-name]');
+            const matchingElement = Array.from(elements).find(el => 
+                el.getAttribute('data-sort-name').toUpperCase().startsWith(letter.toUpperCase())
+            );
+            
+            if (matchingElement) {
+                // Scroll the content area to the matching element
+                matchingElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+        
         // Setup navigation on DOM ready
         document.addEventListener('DOMContentLoaded', () => {
             Object.keys(PAGE_CONFIG).forEach(page => {

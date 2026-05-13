@@ -95,4 +95,25 @@ Direct Execution: This allows the owner to send the AI-scripted follow-up immedi
 
 (by giving this right on the leads section we offer instant value. allow users to understand what is happening with their leads - see them in analytics mode rather than emotional mode which is how they increase changes of closing them.)
 
-Make the 
+## The PLAYGROUND.
+this section is aimed at helping the user train and test their own ai models. its important to have it because a user can change and modify prompts based on how the model behaves.
+
+The section screen has 2 views on the left the instructions view, on the right the chat area where the user can chat with their models.
+
+two models can be selected at the top left section(which determine which instructions load and which endpoint the test conversations go to.) follow up model and chat model.
+each model has a different ui.
+
+*CHATS MODEL*
+this model is the one that chats with the users leads on whatsapp when they send new messages. its trained more on scenarios. so at the very top of the chat section, place a 'Create Scenario button(small +) that opens a small input with 'type in your scenario' then there is a 'test(orange) button at the right of this small input area. the aim of this is to send a scenario to the backend which the ai will use as a lens through which it sees the chat the user is about to write. this is to be used when the user is trying to show the ai how a customer would respond one way and mean another way.
+
+Then there is the no scenario mode(which is the default) this is where the user begins to chat and the ai goes off to ensure the chat goes as well as possible. 
+
+on hover of the ai message bubble, add a x(red) and a tick button(green) that the user can use to reinforce/retrain the ais responses. when x is clicked a small input area, just on the left of this button appears with placeholder 'how would ai have responded?' and then user types the most probable response and clicks a save button on the right of this input area. 
+the tick(correct sign) when clicked shows a toast with 'response saved!'(green). saving the corrected response should do the same too.
+
+*FOLLOW UP MODEL*
+ When this is selected the section right above the chat section nw has other functions. remove the ones that were there and show this;
+
+in addition to scenarios follow up models would be trained more on 'history chats'. add a search area that searches leads and loads the actual chat from that lead. the button at the bottom of the chat section(because there isno need to type a response here) can be switched from typing section to a 'Follow up' button. this section helps us see the model follow up messages to our real customers by seeing how it understands the user. resulting message bubble should be the ais follow up with a time like 'To be sent at 'Time ai analysed it can send it'. the user can continue to simulate the conversation and click on 'follow up' to see how it responds. like the chat ai, the x and tick buttons on the ai response are here too for the same reason and functioning the same.
+
+avoid color blue, stick with grey(for customer messages) green for user messages and orange for ai messages. 

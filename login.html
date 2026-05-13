@@ -161,7 +161,7 @@
     </div>
 
     <script src="initSupabase.js"></script>
-    <script src="js/supabaseClient.js"></script>
+    <script src="js/auth.js"></script>
     <script>
         // --- 1. CONFIGURATION ---
         // Supabase initialization in initSupabase.js
@@ -180,7 +180,7 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
 
-            const result = await supabaseAPI.auth.signInWithPassword(email, password);
+            const result = await authManager.signInWithPassword(email, password);
             if (!result.success) {
                 notify(result.error.message);
             } else {
@@ -193,7 +193,7 @@
             tempEmail = document.getElementById('email').value;
             if (!tempEmail) return notify("Please enter your email first");
 
-            const result = await supabaseAPI.auth.signInWithOtp(tempEmail);
+            const result = await authManager.signInWithOtp(tempEmail);
             if (!result.success) {
                 notify(result.error.message);
             } else {
@@ -208,7 +208,7 @@
             let token = '';
             otpBoxes.forEach(b => token += b.value);
 
-            const result = await supabaseAPI.auth.verifyOtp(tempEmail, token, 'email');
+            const result = await authManager.verifyOtp(tempEmail, token, 'email');
             if (!result.success) {
                 notify(result.error.message);
                 otpBoxes.forEach(b => b.value = '');

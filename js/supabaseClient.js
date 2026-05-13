@@ -1,7 +1,8 @@
 // ==========================================
-// SUPABASE CLIENT API LAYER
+// SUPABASE DATABASE & STORAGE API LAYER
 // ==========================================
-// All Supabase database and auth calls go here
+// All Supabase database and storage calls (non-auth) go here
+// Authentication logic is in auth.js
 // This ensures clean, organized, and centralized API management
 // Import this file in your HTML and call methods from supabaseAPI
 
@@ -15,112 +16,13 @@ const getClient = () => {
 };
 
 // ==========================================
-// AUTHENTICATION METHODS
+// DATABASE METHODS
 // ==========================================
 const supabaseAPI = {
-    // Sign up with email and password
-    auth: {
-        signUpWithPassword: async (email, password) => {
-            try {
-                const { data, error } = await getClient().auth.signUp({
-                    email,
-                    password
-                });
-                if (error) throw error;
-                return { success: true, data };
-            } catch (error) {
-                console.error('Sign up error:', error);
-                return { success: false, error };
-            }
-        },
-
-        // Sign in with email and password
-        signInWithPassword: async (email, password) => {
-            try {
-                const { data, error } = await getClient().auth.signInWithPassword({
-                    email,
-                    password
-                });
-                if (error) throw error;
-                return { success: true, data };
-            } catch (error) {
-                console.error('Sign in error:', error);
-                return { success: false, error };
-            }
-        },
-
-        // Sign in with OTP (magic link)
-        signInWithOtp: async (email) => {
-            try {
-                const { data, error } = await getClient().auth.signInWithOtp({
-                    email
-                });
-                if (error) throw error;
-                return { success: true, data };
-            } catch (error) {
-                console.error('OTP sign in error:', error);
-                return { success: false, error };
-            }
-        },
-
-        // Verify OTP
-        verifyOtp: async (email, token, type = 'email') => {
-            try {
-                const { data, error } = await getClient().auth.verifyOtp({
-                    email,
-                    token,
-                    type
-                });
-                if (error) throw error;
-                return { success: true, data };
-            } catch (error) {
-                console.error('OTP verification error:', error);
-                return { success: false, error };
-            }
-        },
-
-        // Sign out
-        signOut: async () => {
-            try {
-                const { error } = await getClient().auth.signOut();
-                if (error) throw error;
-                return { success: true };
-            } catch (error) {
-                console.error('Sign out error:', error);
-                return { success: false, error };
-            }
-        },
-
-        // Get current session
-        getSession: async () => {
-            try {
-                const { data, error } = await getClient().auth.getSession();
-                if (error) throw error;
-                return { success: true, data };
-            } catch (error) {
-                console.error('Get session error:', error);
-                return { success: false, error };
-            }
-        },
-
-        // Get current user
-        getUser: async () => {
-            try {
-                const { data, error } = await getClient().auth.getUser();
-                if (error) throw error;
-                return { success: true, data };
-            } catch (error) {
-                console.error('Get user error:', error);
-                return { success: false, error };
-            }
-        }
-    },
-
-    // ==========================================
-    // DATABASE METHODS
-    // ==========================================
     db: {
-        // Fetch data from a table
+        // FETCH DATA FROM TABLE
+        // Retrieves data from a table with optional filtering, limiting, and ordering
+        // Used in: getstarted.js (checking business connection status)
         fetchData: async (table, options = {}) => {
             try {
                 let query = getClient().from(table).select(options.select || '*');
@@ -143,7 +45,9 @@ const supabaseAPI = {
             }
         },
 
-        // Insert data into a table
+        // INSERT DATA INTO TABLE
+        // Adds new records to a table and returns the inserted data
+        // Not currently used but available for creating new records
         insertData: async (table, data) => {
             try {
                 const { data: result, error } = await getClient()
@@ -159,7 +63,9 @@ const supabaseAPI = {
             }
         },
 
-        // Update data in a table
+        // UPDATE DATA IN TABLE
+        // Modifies existing records in a table by ID
+        // Not currently used but available for editing records
         updateData: async (table, id, updates) => {
             try {
                 const { data, error } = await getClient()
@@ -176,7 +82,9 @@ const supabaseAPI = {
             }
         },
 
-        // Delete data from a table
+        // DELETE DATA FROM TABLE
+        // Removes records from a table by ID
+        // Not currently used but available for deleting records
         deleteData: async (table, id) => {
             try {
                 const { data, error } = await getClient()
@@ -192,7 +100,9 @@ const supabaseAPI = {
             }
         },
 
-        // Fetch a single record
+        // FETCH SINGLE RECORD BY ID
+        // Retrieves a specific record from a table by its ID
+        // Used in: getstarted.js (checking if business WhatsApp connection is established)
         fetchOne: async (table, id) => {
             try {
                 const { data, error } = await getClient()
@@ -211,10 +121,12 @@ const supabaseAPI = {
     },
 
     // ==========================================
-    // STORAGE METHODS (File uploads)
+    // STORAGE METHODS (File uploads/management)
     // ==========================================
     storage: {
-        // Upload a file
+        // UPLOAD FILE
+        // Uploads a file to a Supabase storage bucket
+        // Not currently used but available for file uploads
         uploadFile: async (bucket, path, file) => {
             try {
                 const { data, error } = await getClient()
@@ -230,7 +142,9 @@ const supabaseAPI = {
             }
         },
 
-        // Delete a file
+        // DELETE FILE
+        // Removes a file from a Supabase storage bucket
+        // Not currently used but available for file deletion
         deleteFile: async (bucket, path) => {
             try {
                 const { data, error } = await getClient()
@@ -246,7 +160,9 @@ const supabaseAPI = {
             }
         },
 
-        // Get public URL for a file
+        // GET PUBLIC FILE URL
+        // Generates a public URL for accessing a file from storage
+        // Not currently used but available for sharing files
         getPublicUrl: (bucket, path) => {
             try {
                 const { data } = getClient()
@@ -257,37 +173,6 @@ const supabaseAPI = {
                 return { success: true, url: data.publicUrl };
             } catch (error) {
                 console.error(`Get URL error (${bucket}):`, error);
-                return { success: false, error };
-            }
-        }
-    },
-
-    // ==========================================
-    // REAL-TIME SUBSCRIPTIONS
-    // ==========================================
-    realtime: {
-        // Subscribe to changes in a table
-        subscribeToTable: (table, callback) => {
-            try {
-                const subscription = getClient()
-                    .channel(`public:${table}`)
-                    .on('postgres_changes', { event: '*', schema: 'public', table }, callback)
-                    .subscribe();
-                
-                return { success: true, subscription };
-            } catch (error) {
-                console.error(`Subscribe error (${table}):`, error);
-                return { success: false, error };
-            }
-        },
-
-        // Unsubscribe from changes
-        unsubscribeFromTable: async (subscription) => {
-            try {
-                await getClient().removeChannel(subscription);
-                return { success: true };
-            } catch (error) {
-                console.error('Unsubscribe error:', error);
                 return { success: false, error };
             }
         }

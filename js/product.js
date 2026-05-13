@@ -131,6 +131,10 @@ function renderProductsPage() {
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg>
                         </button>
                     </div>
+                    <button onclick="toggleImporterModal()" class="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Add Product
+                    </button>
                 </div>
             </div>
 
@@ -181,7 +185,7 @@ function renderImageView() {
     return `
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             ${filtered.map(p => `
-                <div class="animate-card glass-panel rounded-3xl overflow-hidden group hover:shadow-2xl hover:shadow-gray-200/50 flex flex-col bg-white border border-gray-50">
+                <div data-sort-name="${p.title}" class="animate-card glass-panel rounded-3xl overflow-hidden group hover:shadow-2xl hover:shadow-gray-200/50 flex flex-col bg-white border border-gray-50">
                     <div class="anim-img relative h-52 w-full overflow-hidden bg-gray-100">
                         <img data-src="${p.img}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 208'%3E%3Crect fill='%23f3f4f6' width='400' height='208'/%3E%3C/svg%3E" alt="${p.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 lazy-image" style="opacity: 0.6;">
                         <div class="absolute top-3 right-3 z-10">
@@ -225,7 +229,7 @@ function renderListView() {
                 </thead>
                 <tbody class="divide-y divide-gray-50">
                     ${filtered.map(p => `
-                        <tr class="animate-card hover:bg-gray-50/30 transition-colors">
+                        <tr data-sort-name="${p.title}" class="animate-card hover:bg-gray-50/30 transition-colors">
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-4">
                                     <div class="anim-img shrink-0">
