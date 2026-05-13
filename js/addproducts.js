@@ -2,10 +2,15 @@
 // AI PRODUCT IMPORTER - IMAGE QUEUE & PROCESSING
 // ==========================================
 
-let imageQueue = []; // Store images with base64
-let processingInProgress = false;
-let currentBusinessId = 'fortunebooks12'; // Testing business ID
+// Safety Header: Checks if variables are already declared by other scripts
+window.imageQueue = window.imageQueue || []; 
+window.processingInProgress = window.processingInProgress || false;
+window.currentBusinessId = window.currentBusinessId || 'fortunebooks12';
 
+// Standardize local references so the rest of your code works perfectly
+var imageQueue = window.imageQueue;
+var processingInProgress = window.processingInProgress;
+var currentBusinessId = window.currentBusinessId;
 // Initialize importer on page load
 document.addEventListener('DOMContentLoaded', () => {
     initializeImporter();

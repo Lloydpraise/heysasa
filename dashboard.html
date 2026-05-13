@@ -302,12 +302,11 @@
 
             <div class="nav-section-title">Your AI</div>
             
-            <a href="#" class="nav-item">
-                <div class="nav-icon-box">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                </div>
-                Playground
-            </a>
+           <a href="#" class="nav-item" id="nav-playground"> <div class="nav-icon-box">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+    </div>
+    Playground
+</a>
 
         </div>
 
@@ -403,9 +402,6 @@
 
         </div>
     </main>
-    <script src="js/addproducts.js"></script>
-    <script src="initSupabase.js"></script>
-    <script src="js/supabaseClient.js"></script>
     
     <script>
         // Page Configuration
@@ -531,7 +527,6 @@
         });
     </script>
     
-    <script src="js/leads.js"></script>
     <script>
         // Simulate high-speed JS injection taking over
         setTimeout(() => {
@@ -551,7 +546,7 @@
             }, 300);
 
         }, 2000); 
-    </script><script src="js/product.js"></script>
+    </script>
     <div id="intel-drawer" class="fixed inset-y-0 right-0 w-[400px] glass-panel m-4 rounded-[2rem] z-50 translate-x-[110%] transition-transform duration-500 ease-in-out shadow-2xl border-l border-white/50 flex flex-col">
         <div class="p-6 border-b border-white/30 flex justify-between items-center">
             <h2 class="font-bold text-lg text-[#0F172A]">Lead Intelligence</h2>
@@ -636,11 +631,14 @@
             </div>
         </div>
     </div>
+    <script src="initSupabase.js"></script>
+    <script src="js/supabaseClient.js"></script>
     <script src="js/getstarted.js"></script>
     <script src="js/leads.js"></script>
     <script src="js/addleads.js"></script>
     <script src="js/product.js"></script>
     <script src="js/addproducts.js"></script>
+    <script src="js/playground.js"></script>
 
 </body>
 </html>
