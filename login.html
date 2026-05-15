@@ -7,6 +7,7 @@
     <title>Login | HeySasa!</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="initSupabase.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
@@ -84,16 +85,12 @@
 </head>
 <body class="antialiased">
 
-    <!-- Notification Toast -->
     <div id="toast" class="fixed top-4 right-4 text-white px-6 py-4 rounded-2xl shadow-2xl transform translate-y-[-150%] transition-transform duration-300 z-50 font-medium">
         <span id="toast-message"></span>
     </div>
 
     <div class="w-full max-w-md px-6 z-10">
         
-        <!-- ========================================== -->
-        <!-- SCREEN 1: LOGIN                            -->
-        <!-- ========================================== -->
         <div id="screen-login" class="glass-card p-10 text-center fade-show">
             <img src="images/heysasalogo1.png" alt="HeySasa!" class="h-10 mx-auto mb-8">
             <h1 class="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
@@ -120,9 +117,6 @@
             </div>
         </div>
 
-        <!-- ========================================== -->
-        <!-- SCREEN 2: VERIFICATION                     -->
-        <!-- ========================================== -->
         <div id="screen-otp" class="glass-card p-10 text-center fade-hide">
             <div class="w-12 h-12 bg-[#28A745]/10 rounded-full flex items-center justify-center mx-auto mb-6">
                 <svg class="w-6 h-6 text-[#28A745]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
@@ -153,127 +147,13 @@
 
     </div>
 
-    <!-- Background Layers -->
     <div class="bg-grain-container"><div class="bg-grain"></div></div>
     <div class="mesh-bg">
         <div class="blob blob-1"></div>
         <div class="blob blob-2"></div>
     </div>
 
-    <script src="initSupabase.js"></script>
     <script src="js/auth.js"></script>
-    <script>
-       // --- 1. CONFIGURATION ---
-const screenLogin = document.getElementById('screen-login');
-const screenOtp = document.getElementById('screen-otp');
-const otpBoxes = document.querySelectorAll('.otp-box');
-let tempEmail = ''; // Stores email between password and OTP steps
-
-// --- 2. AUTH LOGIC (OPTION TWO: PASSWORD THEN OTP) ---
-
-// Handle the Initial Login Form (Email + Password)
-document.getElementById('login-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    const btn = document.getElementById('btn-login');
-
-    // Visual feedback
-    btn.innerText = "Verifying...";
-    btn.disabled = true;
-
-    // STEP 1: Verify Password
-    const loginResult = await authManager.signInWithPassword(email, password);
-    
-    if (!loginResult.success) {
-        notify(loginResult.error.message);
-        btn.innerText = "Sign In";
-        btn.disabled = false;
-        return;
-    }
-
-    // STEP 2: Password is correct, now trigger the OTP challenge
-    tempEmail = email; 
-    const otpResult = await authManager.signInWithOtp(tempEmail);
-
-    if (!otpResult.success) {
-        notify("Password correct, but could not send code: " + otpResult.error.message);
-        btn.innerText = "Sign In";
-        btn.disabled = false;
-    } else {
-        // STEP 3: Switch to the OTP screen
-        document.getElementById('display-email').textContent = tempEmail;
-        toggleScreens(true);
-        notify("Credentials accepted. Please enter your verification code.", false);
-    }
-});
-
-// Handle OTP Verification
-document.getElementById('otp-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('btn-verify');
-    let token = '';
-    otpBoxes.forEach(b => token += b.value);
-
-    if (token.length < 6) return notify("Please enter the full 6-digit code");
-
-    btn.innerText = "Authenticating...";
-
-    const result = await authManager.verifyOtp(tempEmail, token, 'email');
-    
-    if (!result.success) {
-        notify("Invalid code. Please try again.");
-        btn.innerText = "Verify & Sign In";
-        otpBoxes.forEach(b => b.value = '');
-        otpBoxes[0].focus();
-    } else {
-        notify("Identity verified!", false);
-        window.location.href = '/dashboard'; 
-    }
-});
-
-// --- 3. UI HELPERS ---
-
-function notify(msg, err = true) {
-    const t = document.getElementById('toast');
-    document.getElementById('toast-message').textContent = msg;
-    t.style.backgroundColor = err ? '#ef4444' : '#28A745';
-    t.classList.remove('translate-y-[-150%]');
-    setTimeout(() => t.classList.add('translate-y-[-150%]'), 4000);
-}
-
-function toggleScreens(toOtp) {
-    if (toOtp) {
-        screenLogin.classList.replace('fade-show', 'fade-hide');
-        setTimeout(() => {
-            screenLogin.style.display = 'none';
-            screenOtp.style.display = 'block';
-            screenOtp.classList.replace('fade-hide', 'fade-show');
-            otpBoxes[0].focus();
-        }, 400);
-    } else {
-        screenOtp.classList.replace('fade-show', 'fade-hide');
-        setTimeout(() => {
-            screenOtp.style.display = 'none';
-            screenLogin.style.display = 'block';
-            screenLogin.classList.replace('fade-hide', 'fade-show');
-            document.getElementById('btn-login').innerText = "Sign In";
-            document.getElementById('btn-login').disabled = false;
-        }, 400);
-    }
-}
-
-document.getElementById('btn-back').onclick = () => toggleScreens(false);
-
-// Auto-focus OTP boxes logic
-otpBoxes.forEach((box, i) => {
-    box.addEventListener('input', (e) => {
-        if (box.value && i < 5) otpBoxes[i + 1].focus();
-    });
-    box.addEventListener('keydown', (e) => {
-        if (e.key === 'Backspace' && !box.value && i > 0) otpBoxes[i - 1].focus();
-    });
-});
-    </script>
+    <script src="js/login.js"></script>
 </body>
 </html>

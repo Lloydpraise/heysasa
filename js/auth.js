@@ -1,10 +1,7 @@
 // ==========================================
 // AUTHENTICATION MODULE
 // ==========================================
-// All Supabase authentication logic
-// Centralized auth functions for easy access
 
-// Get the initialized Supabase client
 const getAuthClient = () => {
     const client = window.getSupabase();
     if (!client) {
@@ -14,15 +11,9 @@ const getAuthClient = () => {
 };
 
 const authManager = {
-    
-    // SIGN UP WITH EMAIL & PASSWORD
-    // Creates a new user account with email and password
     signUpWithPassword: async (email, password) => {
         try {
-            const { data, error } = await getAuthClient().auth.signUp({
-                email,
-                password
-            });
+            const { data, error } = await getAuthClient().auth.signUp({ email, password });
             if (error) throw error;
             return { success: true, data };
         } catch (error) {
@@ -31,14 +22,9 @@ const authManager = {
         }
     },
 
-    // SIGN IN WITH EMAIL & PASSWORD
-    // Authenticates user with email and password credentials
     signInWithPassword: async (email, password) => {
         try {
-            const { data, error } = await getAuthClient().auth.signInWithPassword({
-                email,
-                password
-            });
+            const { data, error } = await getAuthClient().auth.signInWithPassword({ email, password });
             if (error) throw error;
             return { success: true, data };
         } catch (error) {
@@ -47,13 +33,9 @@ const authManager = {
         }
     },
 
-    // REQUEST OTP (Magic Link)
-    // Sends a one-time password via email for passwordless login
     signInWithOtp: async (email) => {
         try {
-            const { data, error } = await getAuthClient().auth.signInWithOtp({
-                email
-            });
+            const { data, error } = await getAuthClient().auth.signInWithOtp({ email });
             if (error) throw error;
             return { success: true, data };
         } catch (error) {
@@ -62,15 +44,9 @@ const authManager = {
         }
     },
 
-    // VERIFY OTP
-    // Verifies the one-time password token sent to user's email
     verifyOtp: async (email, token, type = 'email') => {
         try {
-            const { data, error } = await getAuthClient().auth.verifyOtp({
-                email,
-                token,
-                type
-            });
+            const { data, error } = await getAuthClient().auth.verifyOtp({ email, token, type });
             if (error) throw error;
             return { success: true, data };
         } catch (error) {
@@ -79,8 +55,19 @@ const authManager = {
         }
     },
 
-    // SIGN OUT
-    // Logs out the current user and clears session
+    updateBusinessUrl: async (websiteUrl) => {
+        try {
+            const { data, error } = await getAuthClient().auth.updateUser({
+                data: { business_website: websiteUrl }
+            });
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Update URL error:', error);
+            return { success: false, error };
+        }
+    },
+
     signOut: async () => {
         try {
             const { error } = await getAuthClient().auth.signOut();
@@ -92,8 +79,6 @@ const authManager = {
         }
     },
 
-    // GET SESSION
-    // Retrieves the current user session if available
     getSession: async () => {
         try {
             const { data, error } = await getAuthClient().auth.getSession();
@@ -105,8 +90,6 @@ const authManager = {
         }
     },
 
-    // GET CURRENT USER
-    // Retrieves the authenticated user's profile information
     getUser: async () => {
         try {
             const { data, error } = await getAuthClient().auth.getUser();
