@@ -178,3 +178,11 @@ Ensure your `initSupabase.js` file is using the correct keys found in **Project 
 
 * **Project URL**: The endpoint for your Supabase instance.
 * **Anon Key**: The public key used for client-side interactions. **Never** use the `service_role` key in your `auth.js` or any frontend file, as it bypasses all security.
+<script src="js/supabaseClient.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/product.js"></script>
+    <script src="js/leads.js"></script>
+    <script src="js/addproducts.js"></script>
+    <script src="js/addleads.js"></script>
+    <script src="js/playground.js"></script>
+    <script src="js/profile.js"></script>

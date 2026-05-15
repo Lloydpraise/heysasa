@@ -7,6 +7,7 @@
     <title>Dashboard | HeySasa!</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="initSupabase.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -206,60 +207,6 @@
             animation: shimmer 2s infinite linear;
             border-radius: 0.5rem;
         }
-        /* Importer Specific Styles */
-        .importer-modal-content {
-            background: rgba(255, 255, 255, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.9);
-        }
-
-        .upload-zone {
-            border: 2px dashed #cbd5e1;
-            transition: all 0.3s ease;
-        }
-
-        .upload-zone:hover {
-            border-color: #28A745;
-            background: rgba(40, 167, 69, 0.05);
-        }
-
-        .loader-spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #28A745;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        .review-card-dashboard {
-            background: white;
-            border: 1px solid rgba(0,0,0,0.05);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-        }
-
-        /* Lazy Loading Image Styles */
-        .lazy-image {
-            transition: opacity 0.6s ease-in-out;
-        }
-
-        .lazy-loaded {
-            opacity: 1 !important;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-
-        img[data-src] {
-            animation: fadeIn 0.6s ease-in-out forwards;
-        }
     </style>
 </head>
 <body class="antialiased h-screen w-screen flex p-4 gap-6">
@@ -278,17 +225,16 @@
         </div>
 
         <div class="flex-1 overflow-y-auto py-6 px-4 flex flex-col gap-1">
-            
             <a href="#" class="nav-item active" id="nav-analytics">
                 <div class="nav-icon-box">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 lucide lucide-chart-no-axes-combined-icon lucide-chart-no-axes-combined"><path d="M12 16v5"/><path d="M16 14.639V21"/><path d="M20 10.656V21"/><path d="m22 3-8.646 8.646a.5.5 0 0 1-.708 0L9.354 8.354a.5.5 0 0 0-.707 0L2 15"/><path d="M4 18.463V21"/><path d="M8 14.656V21"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M12 16v5"/><path d="M16 14.639V21"/><path d="M20 10.656V21"/><path d="m22 3-8.646 8.646a.5.5 0 0 1-.708 0L9.354 8.354a.5.5 0 0 0-.707 0L2 15"/><path d="M4 18.463V21"/><path d="M8 14.656V21"/></svg>
                 </div>
                 Analytics
             </a>
 
             <a href="#" class="nav-item" id="nav-leads">
                 <div class="nav-icon-box">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 lucide lucide-users-icon lucide-users"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></svg>
                 </div>
                 Leads
             </a>
@@ -301,38 +247,53 @@
             </a>
 
             <div class="nav-section-title">Your AI</div>
-            
-           <a href="#" class="nav-item" id="nav-playground"> <div class="nav-icon-box">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 lucide lucide-brain"><path d="M12 18V5"/><path d="M15 13a4.17 4.17 0 0 1-3-4 4.17 4.17 0 0 1-3 4"/><path d="M17.598 6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"/><path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"/><path d="M18 18a4 4 0 0 0 2-7.464"/><path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"/><path d="M6 18a4 4 0 0 1-2-7.464"/><path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"/></svg>
-    </div>
-    Playground
-</a>
-
+            <a href="#" class="nav-item" id="nav-playground"> 
+                <div class="nav-icon-box">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M12 18V5"/><path d="M15 13a4.17 4.17 0 0 1-3-4 4.17 4.17 0 0 1-3 4"/><path d="M17.598 6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"/><path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"/><path d="M18 18a4 4 0 0 0 2-7.464"/><path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"/><path d="M6 18a4 4 0 0 1-2-7.464"/><path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"/></svg>
+                </div>
+                Playground
+            </a>
         </div>
 
-        <div class="p-4 border-t border-white/30 bg-white/20">
-            <a href="#" class="nav-item mb-2">
-                <div class="nav-icon-box !bg-transparent !border-none !shadow-none !w-8 !h-8">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+        <div class="p-4 border-t border-white/20 bg-white/5 mt-auto relative">
+            <div id="profile-trigger" class="group flex items-center gap-4 p-3 rounded-2xl hover:bg-white/60 border border-transparent hover:border-white/80 transition-all duration-300 cursor-pointer hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] active:scale-[0.97]">
+                
+                <div class="relative flex-shrink-0">
+                    <div id="profile-initials" class="w-12 h-12 rounded-xl bg-gradient-to-br from-[#28A745] via-[#208739] to-[#1e7e34] text-white flex items-center justify-center font-bold text-base shadow-[0_4px_15px_rgba(40,167,69,0.3)] group-hover:shadow-[0_4px_25px_rgba(40,167,69,0.5)] transition-all duration-500">
+                        LP
+                    </div>
+                    <span class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-[3px] border-[#F7FBF9] rounded-full shadow-sm animate-pulse"></span>
                 </div>
-                Settings
-            </a>
-            
-            <a href="#" class="flex items-center gap-3 p-2 rounded-xl hover:bg-white/50 transition-colors cursor-pointer border border-transparent hover:border-white/60">
-                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#28A745] to-[#1e7e34] text-white flex items-center justify-center font-bold text-sm shadow-md">
-                    LP
+
+                <div class="flex flex-col min-w-0">
+                    <span id="profile-name" class="text-[15px] font-bold text-[#0F172A] tracking-tight truncate leading-none">Lloyd Praise</span>
+                    <span id="profile-email" class="text-[11px] text-[#64748B] font-semibold truncate opacity-60 group-hover:opacity-100 mt-1 transition-opacity">lloydpraise@example.com</span>
                 </div>
-                <div class="flex flex-col">
-                    <span class="text-sm font-bold text-[#0F172A] leading-tight">Lloyd Praise</span>
-                    <span class="text-[11px] text-[#64748B] font-medium leading-tight mt-0.5">user@heysasa.com</span>
+
+                <div class="ml-auto opacity-30 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300">
+                    <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+                    </svg>
                 </div>
-                <svg class="w-4 h-4 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-            </a>
+            </div>
+
+            <div id="profile-menu" class="hidden absolute bottom-24 left-4 w-60 glass-panel rounded-[1.5rem] shadow-2xl border border-white/60 z-[100] overflow-hidden">
+                <div class="p-2 flex flex-col gap-1">
+                    <button onclick="openPasswordModal()" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-white/80 rounded-xl transition-all w-full text-left">
+                        <svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                        Security Settings
+                    </button>
+                    <div class="h-px bg-slate-200/40 mx-2"></div>
+                    <button onclick="handleLogout()" class="flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-50/60 rounded-xl transition-all w-full text-left">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                        Sign Out
+                    </button>
+                </div>
+            </div>
         </div>
     </aside>
 
     <main class="flex-1 h-full z-10 flex flex-col gap-6">
-        
         <header class="glass-panel rounded-[2rem] px-8 py-5 flex justify-between items-center shadow-lg shadow-[#28A745]/5">
             <div>
                 <h1 id="section-title" class="text-2xl font-bold text-[#0F172A] tracking-tight">Analytics</h1>
@@ -340,40 +301,18 @@
             </div>
         </header>
 
-       <div class="flex-1 flex gap-4 overflow-hidden">
-            
+        <div class="flex-1 flex gap-4 overflow-hidden">
             <div class="glass-panel rounded-[2rem] flex-1 p-8 overflow-y-auto relative shadow-xl shadow-[#28A745]/5 border-t border-white/80">
-                
                 <div id="skeleton-loader" class="w-full h-full space-y-8">
                     <div class="flex justify-between items-center">
                         <div class="skeleton-box h-11 w-64 rounded-xl"></div>
-                        <div class="flex gap-3">
-                            <div class="skeleton-box h-11 w-24 rounded-xl"></div>
-                            <div class="skeleton-box h-11 w-11 rounded-xl"></div>
-                        </div>
+                        <div class="flex gap-3"><div class="skeleton-box h-11 w-24 rounded-xl"></div><div class="skeleton-box h-11 w-11 rounded-xl"></div></div>
                     </div>
-
                     <div class="grid grid-cols-4 gap-6">
-                        <div class="p-4 rounded-2xl border border-white/50 bg-white/30 flex flex-col gap-4">
-                            <div class="skeleton-box h-32 w-full rounded-xl"></div>
-                            <div class="skeleton-box h-4 w-3/4"></div>
-                            <div class="skeleton-box h-3 w-1/2 opacity-60"></div>
-                        </div>
-                        <div class="p-4 rounded-2xl border border-white/50 bg-white/30 flex flex-col gap-4">
-                            <div class="skeleton-box h-32 w-full rounded-xl"></div>
-                            <div class="skeleton-box h-4 w-3/4"></div>
-                            <div class="skeleton-box h-3 w-1/2 opacity-60"></div>
-                        </div>
-                        <div class="p-4 rounded-2xl border border-white/50 bg-white/30 flex flex-col gap-4">
-                            <div class="skeleton-box h-32 w-full rounded-xl"></div>
-                            <div class="skeleton-box h-4 w-3/4"></div>
-                            <div class="skeleton-box h-3 w-1/2 opacity-60"></div>
-                        </div>
-                        <div class="p-4 rounded-2xl border border-white/50 bg-white/30 flex flex-col gap-4">
-                            <div class="skeleton-box h-32 w-full rounded-xl"></div>
-                            <div class="skeleton-box h-4 w-3/4"></div>
-                            <div class="skeleton-box h-3 w-1/2 opacity-60"></div>
-                        </div>
+                        <div class="p-4 rounded-2xl border border-white/50 bg-white/30 flex flex-col gap-4"><div class="skeleton-box h-32 w-full rounded-xl"></div><div class="skeleton-box h-4 w-3/4"></div></div>
+                        <div class="p-4 rounded-2xl border border-white/50 bg-white/30 flex flex-col gap-4"><div class="skeleton-box h-32 w-full rounded-xl"></div><div class="skeleton-box h-4 w-3/4"></div></div>
+                        <div class="p-4 rounded-2xl border border-white/50 bg-white/30 flex flex-col gap-4"><div class="skeleton-box h-32 w-full rounded-xl"></div><div class="skeleton-box h-4 w-3/4"></div></div>
+                        <div class="p-4 rounded-2xl border border-white/50 bg-white/30 flex flex-col gap-4"><div class="skeleton-box h-32 w-full rounded-xl"></div><div class="skeleton-box h-4 w-3/4"></div></div>
                     </div>
                 </div>
 
@@ -387,258 +326,57 @@
                     </div>
                 </div>
             </div>
-
-            <div id="alpha-strip" class="glass-panel w-10 rounded-[2rem] flex flex-col items-center justify-between py-6 text-[11px] font-bold text-[#94A3B8] shadow-lg border-t border-white/80 hidden">
-                <style>
-                    .alpha-link:hover { color: #28A745; transform: scale(1.2); }
-                </style>
-                <script>
-                    const alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-                    alpha.forEach(l => {
-                        document.write(`<a onclick="scrollToLetter('${l}')" class="alpha-link transition-all duration-200 cursor-pointer">${l}</a>`);
-                    });
-                </script>
-            </div>
-
         </div>
     </main>
+
+    <div id="password-modal" class="fixed inset-0 z-[110] hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closePasswordModal()"></div>
+        <div class="glass-panel w-full max-w-md rounded-[2rem] relative z-10 p-8 shadow-2xl border border-white/50">
+            <h2 class="text-xl font-bold text-[#0F172A] mb-6">Change Password</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2">Old Password</label>
+                    <input type="password" id="old-password" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#28A745] outline-none transition-all" placeholder="Enter current password">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2">New Password</label>
+                    <input type="password" id="new-password" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#28A745] outline-none transition-all" placeholder="Enter new password">
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button onclick="closePasswordModal()" class="flex-1 py-3 font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-all">Cancel</button>
+                    <button onclick="submitPasswordChange()" class="flex-1 py-3 bg-[#28A745] text-white font-bold rounded-xl hover:bg-[#208739] transition-all shadow-lg shadow-[#28A745]/20">Change Password</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="success-toast" class="fixed bottom-10 right-10 z-[120] translate-y-20 opacity-0 transition-all duration-500 pointer-events-none">
+        <div class="bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10">
+            <div class="w-8 h-8 bg-[#28A745] rounded-full flex items-center justify-center">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            <span class="font-bold text-sm">successfully changed</span>
+        </div>
+    </div>
+
+    <script src="js/supabaseClient.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/product.js"></script>
+    <script src="js/leads.js"></script>
+    <script src="js/addproducts.js"></script>
+    <script src="js/addleads.js"></script>
+    <script src="js/playground.js"></script>
+    <script src="js/profile.js"></script>
     
     <script>
-        // Page Configuration
-        const PAGE_CONFIG = {
-            analytics: {
-                title: 'Analytics',
-                description: 'Overview of your business performance.',
-                navId: 'nav-analytics'
-            },
-            leads: {
-                title: 'Leads',
-                description: 'Manage and track your sales conversations.',
-                navId: 'nav-leads'
-            },
-            products: {
-                title: 'Products',
-                description: 'Manage the catalog Sasa uses to sell.',
-                navId: 'nav-products'
-            }
-        };
-
-        let currentPage = 'analytics';
-
-        // Update header based on current page
-        function updateHeader(page) {
-            const config = PAGE_CONFIG[page];
-            if (config) {
-                document.getElementById('section-title').textContent = config.title;
-                document.getElementById('section-description').textContent = config.description;
-                currentPage = page;
-            }
-        }
-
-        // Global page switch handler
-        function switchPage(page) {
-            const navItems = document.querySelectorAll('[id^="nav-"]');
-            
-            // Remove active class from all nav items
-            navItems.forEach(item => item.classList.remove('active'));
-            
-            // Toggle alphabet strip visibility
-            const alphaStrip = document.getElementById('alpha-strip');
-            if (page === 'leads' || page === 'products') {
-                alphaStrip.classList.remove('hidden');
-            } else {
-                alphaStrip.classList.add('hidden');
-            }
-            
-            // Add active class to selected page
-            const config = PAGE_CONFIG[page];
-            if (config) {
-                const navItem = document.getElementById(config.navId);
-                if (navItem) navItem.classList.add('active');
-                
-                // Update header
-                updateHeader(page);
-                
-                // Call page-specific renderer
-                const contentArea = document.getElementById('content-area');
-                if (page === 'products' && typeof renderProductsPage === 'function') {
-                    renderProductsPage();
-                } else if (page === 'leads' && typeof renderLeadsList === 'function') {
-                    renderLeadsList();
-                } else if (page === 'analytics') {
-                    contentArea.classList.add('items-center', 'justify-center');
-                    contentArea.classList.remove('flex-col', 'overflow-y-auto', 'p-4');
-                    contentArea.innerHTML = `
-                        <div class="glass-card p-10 text-center max-w-md w-full shadow-2xl">
-                            <div class="w-16 h-16 bg-[#28A745]/10 rounded-2xl flex items-center justify-center mx-auto mb-5">
-                                <svg class="w-8 h-8 text-[#28A745]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                            </div>
-                            <h3 class="text-xl font-bold text-[#0F172A] mb-2">Analytics UI Ready</h3>
-                            <p class="text-sm text-[#64748B] leading-relaxed">The Dashboard data will be visualized here.</p>
-                        </div>
-                    `;
-                }
-            }
-        }
-
-        // Toggle Product Importer Modal
-        function toggleImporterModal() {
-            const modal = document.getElementById('product-importer-modal');
-            if (modal) {
-                modal.classList.toggle('hidden');
-                // Add/remove pointer-events-none to prevent blocking interactions when hidden
-                if (modal.classList.contains('hidden')) {
-                    modal.classList.add('pointer-events-none');
-                } else {
-                    modal.classList.remove('pointer-events-none');
-                }
-            }
-        }
-
-        // Scroll to letter in current list
-        function scrollToLetter(letter) {
-            const contentArea = document.getElementById('content-area');
-            if (!contentArea) return;
-            
-            // Find elements that start with the letter (case-insensitive)
-            const elements = contentArea.querySelectorAll('[data-sort-name]');
-            const matchingElement = Array.from(elements).find(el => 
-                el.getAttribute('data-sort-name').toUpperCase().startsWith(letter.toUpperCase())
-            );
-            
-            if (matchingElement) {
-                // Scroll the content area to the matching element
-                matchingElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }
-        
-        // Setup navigation on DOM ready
         document.addEventListener('DOMContentLoaded', () => {
-            Object.keys(PAGE_CONFIG).forEach(page => {
-                const config = PAGE_CONFIG[page];
-                const navItem = document.getElementById(config.navId);
-                if (navItem) {
-                    navItem.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        switchPage(page);
-                    });
-                }
-            });
+            setTimeout(() => {
+                const skeleton = document.getElementById('skeleton-loader');
+                const content = document.getElementById('content-area');
+                if(skeleton) skeleton.style.display = 'none';
+                if(content) content.classList.remove('opacity-0', 'pointer-events-none');
+            }, 1500);
         });
     </script>
-    
-    <script>
-        // Simulate high-speed JS injection taking over
-        setTimeout(() => {
-            const skeleton = document.getElementById('skeleton-loader');
-            const content = document.getElementById('content-area');
-            
-            // Fade out skeleton
-            skeleton.style.transition = 'opacity 0.3s ease';
-            skeleton.style.opacity = '0';
-            
-            setTimeout(() => {
-                skeleton.style.display = 'none';
-                content.classList.remove('opacity-0', 'pointer-events-none');
-                
-                // Initialize with analytics page
-                switchPage('analytics');
-            }, 300);
-
-        }, 2000); 
-    </script>
-    <div id="intel-drawer" class="fixed inset-y-0 right-0 w-[400px] glass-panel m-4 rounded-[2rem] z-50 translate-x-[110%] transition-transform duration-500 ease-in-out shadow-2xl border-l border-white/50 flex flex-col">
-        <div class="p-6 border-b border-white/30 flex justify-between items-center">
-            <h2 class="font-bold text-lg text-[#0F172A]">Lead Intelligence</h2>
-            <button onclick="closeDrawers()" class="p-2 hover:bg-black/5 rounded-full transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-            </button>
-        </div>
-        <div id="intel-content" class="flex-1 overflow-y-auto p-6 space-y-6">
-        </div>
-    </div>
-
-    <div id="chat-drawer" class="fixed inset-y-0 right-0 w-[350px] bg-white/90 backdrop-blur-xl z-[60] translate-x-full transition-transform duration-500 ease-in-out shadow-2xl border-l border-slate-200 flex flex-col">
-        <div class="p-4 bg-[#28A745] text-white flex items-center gap-3">
-            <img src="images/flavicon.PNG" class="w-6 h-6 brightness-0 invert" alt="Sasa">
-            <span class="font-bold text-sm">WhatsApp Transcript</span>
-            <button onclick="toggleChat()" class="ml-auto text-white/80 hover:text-white">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-            </button>
-        </div>
-        <div id="chat-content" class="flex-1 overflow-y-auto p-4 bg-slate-50/50">
-        </div>
-    </div>
-
-    <style>
-        .drawer-open { transform: translateX(0) !important; }
-        .intel-active { transform: translateX(-360px) !important; } /* Push intel drawer left when chat opens */
-    </style>
-    <div id="product-importer-modal" class="fixed inset-0 z-[100] hidden pointer-events-none flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onclick="toggleImporterModal()"></div>
-        
-        <div class="glass-panel w-full max-w-6xl h-[90vh] rounded-[2.5rem] relative z-10 flex flex-col overflow-hidden shadow-2xl">
-            
-            <div class="px-8 py-6 border-b border-white/40 flex justify-between items-center bg-white/30">
-                <div>
-                    <h2 class="text-xl font-bold text-[#0F172A] flex items-center gap-3">
-                        <span class="p-2 bg-[#28A745]/10 rounded-lg text-[#28A745]"><i class="fa-solid fa-robot"></i></span>
-                        AI Product Importer
-                    </h2>
-                    <p class="text-xs text-[#64748B] mt-1 font-medium">Bulk upload images and let Sasa do the hardwork.</p>
-                </div>
-                
-                <button onclick="toggleImporterModal()" class="p-2 hover:bg-black/5 rounded-full transition-colors text-slate-400">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-                </button>
-            </div>
-
-            <div class="flex-1 overflow-hidden flex flex-col lg:flex-row">
-                
-                <div class="w-full lg:w-80 border-r border-white/40 p-6 flex flex-col bg-white/10">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-[#94A3B8] mb-4">Upload Queue</h3>
-                    
-                    <div class="upload-zone rounded-2xl p-6 text-center cursor-pointer mb-4" onclick="document.getElementById('aiFileInput').click()">
-                        <input id="aiFileInput" type="file" accept="image/*" multiple class="hidden">
-                        <div class="w-12 h-12 rounded-full bg-[#28A745]/10 mx-auto mb-3 flex items-center justify-center">
-                            <i class="fa-solid fa-cloud-arrow-up text-[#28A745]"></i>
-                        </div>
-                        <div class="text-sm font-bold text-[#0F172A]">Select Product Images</div>
-                        <p class="text-[10px] text-[#64748B] mt-1">JPG, PNG, or WEBP</p>
-                    </div>
-
-                    <button id="aiProcessBtn" class="w-full py-3 bg-[#28A745] text-white rounded-xl font-bold hover:bg-[#208739] transition-all shadow-lg shadow-[#28A745]/20 disabled:opacity-50" onclick="startAiProcessing()">
-                        <i class="fa-solid fa-play mr-2"></i> Start Processing
-                    </button>
-
-                    <div id="aiQueueList" class="mt-6 flex-1 overflow-y-auto space-y-2 pr-2">
-                        <div id="aiEmptyQueueMsg" class="text-center text-[#94A3B8] text-xs py-10 italic">Queue is empty</div>
-                    </div>
-                </div>
-
-                <div class="flex-1 p-6 overflow-y-auto bg-slate-50/30">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-sm font-bold text-[#0F172A]">Review & Publish <span id="aiReviewCount" class="bg-[#28A745]/10 text-[#28A745] px-2 py-0.5 rounded text-[10px] ml-2">0</span></h3>
-                    </div>
-                    
-                    <div id="aiReviewContainer" class="grid grid-cols-1 xl:grid-cols-2 gap-6 pb-20">
-                        <div class="col-span-full py-20 text-center opacity-40">
-                            <i class="fa-solid fa-boxes-stacked text-5xl mb-4"></i>
-                            <p class="text-sm font-medium">Processed products will appear here.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <script src="initSupabase.js"></script>
-    <script src="js/supabaseClient.js"></script>
-    <script src="js/getstarted.js"></script>
-    <script src="js/leads.js"></script>
-    <script src="js/addleads.js"></script>
-    <script src="js/product.js"></script>
-    <script src="js/addproducts.js"></script>
-    <script src="js/playground.js"></script>
-
 </body>
 </html>
