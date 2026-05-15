@@ -117,5 +117,64 @@ the tick(correct sign) when clicked shows a toast with 'response saved!'(green).
 in addition to scenarios follow up models would be trained more on 'history chats'. add a search area that searches leads and loads the actual chat from that lead. the button at the bottom of the chat section(because there isno need to type a response here) can be switched from typing section to a 'Follow up' button. this section helps us see the model follow up messages to our real customers by seeing how it understands the user. resulting message bubble should be the ais follow up with a time like 'To be sent at 'Time ai analysed it can send it'. the user can continue to simulate the conversation and click on 'follow up' to see how it responds. like the chat ai, the x and tick buttons on the ai response are here too for the same reason and functioning the same.
 
 avoid color blue, stick with grey(for customer messages) green for user messages and orange for ai messages. 
-SUPABASE_URL = 'https://xgtnbxdxbbywvzrttixf.supabase.co'
-'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhndG5ieGR4YmJ5d3Z6cnR0aXhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0Nzg5NTAsImV4cCI6MjA3MjA1NDk1MH0.YGk0vFyIJEiSpu5phzV04Mh4lrHBlfYLFtPP_afFtMQ'; // Replace with your Supabase anon key
+
+To use the authentication features in your `auth.js` file with Supabase, you must configure your Supabase project dashboard to handle email-based authentication and security.
+
+---
+
+## 1. Authentication Settings
+
+The functions `signInWithPassword` and `signInWithOtp` require specific providers to be enabled:
+
+* **Enable Email Provider**: Go to **Authentication > Providers** and ensure **Email** is toggled to **Enabled**.
+* **Confirm Email**: By default, Supabase requires users to confirm their email before logging in.
+* If you want users to log in immediately after `signUpWithPassword`, toggle **Confirm Email** to **OFF**.
+
+
+* **OTP (Magic Links)**: For `signInWithOtp` to work, ensure the **Magic Link** option is enabled within the Email provider settings.
+
+---
+
+## 2. Secure Your Data (RLS)
+
+The `updateBusinessUrl` function attempts to update user metadata (`business_website`). While this metadata is stored in Supabase's internal auth table, you often need a public `profiles` table to store and query this information securely.
+
+* **Create a Profiles Table**: In the **SQL Editor**, create a table that links to your users:
+```sql
+create table profiles (
+  id uuid references auth.users not null primary key,
+  business_website text
+);
+
+```
+
+
+* **Enable Row Level Security (RLS)**: Toggle RLS to **ON** for your tables in the **Database > Tables** section to prevent unauthorized access.
+* **Add a Policy**: Create a policy so users can only update their own data:
+```sql
+create policy "Users can update own profile" 
+on profiles for update 
+using ( auth.uid() = id );
+
+```
+
+
+
+---
+
+## 3. Site URL & Redirects
+
+When using `signInWithOtp` or `signUpWithPassword`, Supabase sends emails containing links.
+
+* **Configure Redirects**: Go to **Authentication > URL Configuration**.
+* **Site URL**: Set this to your main production URL (e.g., `https://yourbusiness.com`).
+* **Redirect URLs**: Add your local development URL (e.g., `http://localhost:5500`) so you can test authentication locally without getting stuck on the production site.
+
+---
+
+## 4. API Credentials
+
+Ensure your `initSupabase.js` file is using the correct keys found in **Project Settings > API**:
+
+* **Project URL**: The endpoint for your Supabase instance.
+* **Anon Key**: The public key used for client-side interactions. **Never** use the `service_role` key in your `auth.js` or any frontend file, as it bypasses all security.

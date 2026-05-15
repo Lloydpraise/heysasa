@@ -2,10 +2,15 @@
 // AUTHENTICATION MODULE
 // ==========================================
 
+/**
+ * Helper to ensure the Supabase client is available before making calls.
+ */
 const getAuthClient = () => {
-    const client = window.getSupabase();
+    // Looks for the client initialized in initSupabase.js
+    const client = window.supabaseClient || (window.getSupabase ? window.getSupabase() : null);
+    
     if (!client) {
-        throw new Error('Supabase client not initialized. Ensure initSupabase.js is loaded.');
+        throw new Error('Supabase client not initialized. Ensure initSupabase.js is loaded correctly.');
     }
     return client;
 };
@@ -55,7 +60,8 @@ const authManager = {
         }
     },
 
-    updateBusinessUrl: async (websiteUrl) => {
+    // Renamed from updateBusinessUrl to updateBusinessProfile to match getstarted.js
+    updateBusinessProfile: async (websiteUrl) => {
         try {
             const { data, error } = await getAuthClient().auth.updateUser({
                 data: { business_website: websiteUrl }
@@ -63,7 +69,7 @@ const authManager = {
             if (error) throw error;
             return { success: true, data };
         } catch (error) {
-            console.error('Update URL error:', error);
+            console.error('Update Profile error:', error);
             return { success: false, error };
         }
     },
@@ -102,7 +108,14 @@ const authManager = {
     }
 };
 
-// Export for use in other files
+// --- CRITICAL CHANGES FOR MULTI-FILE STRUCTURE ---
+
+// 1. Attach to window so login.js and getstarted.js can access it
+window.authManager = authManager;
+
+// 2. Keep CommonJS export for testing/node environments if necessary
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = authManager;
 }
+
+console.log("Auth module loaded and globally accessible.");
