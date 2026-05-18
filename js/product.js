@@ -258,3 +258,13 @@ function renderListView() {
         </div>
     `;
 }
+
+// Register Products page configuration
+if (typeof PAGE_CONFIG !== 'undefined') {
+    PAGE_CONFIG.products = {
+        title: 'Products',
+        description: 'Manage your product catalog.',
+        navId: 'nav-products',
+        render: renderProductsPage
+    };
+}

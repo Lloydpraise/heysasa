@@ -66,62 +66,170 @@ function notify(msg, err = true) {
 // STEP 1: URL Submission
 document.getElementById('url-form').onsubmit = (e) => {
     e.preventDefault();
-    targetWebsiteUrl = document.getElementById('client-url').value;
-    goToStep('login');
+    let url = document.getElementById('client-url').value.trim();
+    
+    // Add https:// for validation if not already present
+    let urlForValidation = url;
+    if (!urlForValidation.startsWith('http://') && !urlForValidation.startsWith('https://')) {
+        urlForValidation = 'https://' + urlForValidation;
+    }
+    
+    // Validate the URL using browser's URL API
+    try {
+        new URL(urlForValidation);
+        targetWebsiteUrl = urlForValidation;
+        goToStep('login');
+    } catch (err) {
+        notify('Invalid URL. Please enter a valid URL (e.g., yourbusiness.com)');
+    }
 };
 
-// STEP 2: Login Submission
+// STEP 2: Login / Sign Up Submission (NEW USERS - Register with password)
 document.getElementById('login-form').onsubmit = async (e) => {
     e.preventDefault();
     currentEmail = document.getElementById('email').value;
-    const pass = document.getElementById('password').value;
+    const password = document.getElementById('password').value;
     const btn = document.getElementById('btn-login');
 
-    btn.innerText = "Verifying...";
+    btn.innerText = "Creating account...";
     btn.disabled = true;
 
-    const res = await authManager.signInWithPassword(currentEmail, pass);
-    if (!res.success) {
-        notify(res.error.message);
+    // STEP 2A: Register the new user with Supabase (creates session)
+    const signUpRes = await authManager.signUpWithPassword(currentEmail, password);
+    
+    if (!signUpRes.success) {
+        notify("Could not create account: " + signUpRes.error.message);
         btn.innerText = "Sign In";
         btn.disabled = false;
+        console.error('Sign up error:', signUpRes.error);
+        return;
+    }
+
+    console.log('New user created successfully, now sending OTP...');
+    btn.innerText = "Sending Code...";
+
+    // STEP 2B: Now send OTP for verification
+    const otpRes = await authManager.signInWithOtp(currentEmail);
+    
+    if (!otpRes.success) {
+        notify("Account created, but could not send code: " + otpRes.error.message);
+        btn.innerText = "Sign In";
+        btn.disabled = false;
+        console.error('OTP error:', otpRes.error);
     } else {
-        const otpRes = await authManager.signInWithOtp(currentEmail);
-        if (!otpRes.success) {
-            notify(otpRes.error.message);
-            btn.disabled = false;
-        } else {
-            document.getElementById('display-email').textContent = currentEmail;
-            goToStep('otp');
-        }
+        document.getElementById('display-email').textContent = currentEmail;
+        goToStep('otp');
+        btn.innerText = "Sign In";
+        btn.disabled = false;
     }
 };
 
 // STEP 3: OTP Verification
 document.getElementById('otp-form').onsubmit = async (e) => {
     e.preventDefault();
+    const btn = document.getElementById('btn-verify');
     let token = '';
     otpBoxes.forEach(b => token += b.value);
+
+    if (token.length < 6) return notify("Please enter the full 6-digit code");
+
+    // Show verifying state
+    btn.innerText = "Verifying...";
+    btn.disabled = true;
 
     const res = await authManager.verifyOtp(currentEmail, token, 'email');
     
     if (res.success) {
+        notify("Identity verified!", false);
+        
+        // Save the password to backend after OTP confirmation
+        const password = document.getElementById('password').value;
+        const saveRes = await authManager.savePasswordToBackend(currentEmail, password);
+        
+        if (!saveRes.success) {
+            console.warn('Password save warning:', saveRes.error);
+            // Continue with onboarding even if password save fails
+        } else {
+            console.log('Password saved successfully to backend');
+        }
+        
         // Now that user is authenticated, trigger the Onboarding Orchestrator
-        startOnboarding(targetWebsiteUrl);
+        setTimeout(() => {
+            startOnboarding(targetWebsiteUrl);
+        }, 500);
     } else {
+        // Log exact error to console
+        console.error('OTP Verification Failed:', res.error);
         notify("Invalid code. Please try again.");
+        btn.innerText = "Verify & Continue";
+        btn.disabled = false;
         otpBoxes.forEach(b => b.value = '');
         otpBoxes[0].focus();
     }
 };
 
-// OTP Auto-focus logic
+// OTP Auto-focus logic + Paste support + Auto-verify
 otpBoxes.forEach((box, i) => {
-    box.onkeyup = (e) => {
-        if (e.key >= 0 && e.key <= 9 && i < 5) otpBoxes[i+1].focus();
-        if (e.key === 'Backspace' && i > 0) otpBoxes[i-1].focus();
-    };
+    box.addEventListener('input', (e) => {
+        if (box.value && i < 5) otpBoxes[i + 1].focus();
+        
+        // Auto-verify when all boxes are filled
+        checkAndAutoVerify();
+    });
+
+    box.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !box.value && i > 0) {
+            otpBoxes[i - 1].focus();
+        }
+    });
+
+    // Handle paste event (only on first box)
+    if (i === 0) {
+        box.addEventListener('paste', (e) => {
+            e.preventDefault();
+            
+            // Get clipboard content
+            const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+            
+            // Extract only digits from the pasted content
+            const digits = pastedText.replace(/\D/g, '').slice(0, 6);
+            
+            // Distribute digits across the OTP boxes
+            digits.split('').forEach((digit, index) => {
+                if (index < 6) {
+                    otpBoxes[index].value = digit;
+                }
+            });
+            
+            // Focus on the next empty box or last box
+            const nextEmptyIndex = digits.length < 6 ? digits.length : 5;
+            otpBoxes[nextEmptyIndex].focus();
+            
+            // Auto-verify if all boxes are filled
+            checkAndAutoVerify();
+        });
+    }
 });
+
+// Auto-verify function: checks if all boxes are filled and submits
+function checkAndAutoVerify() {
+    let allFilled = true;
+    let token = '';
+    otpBoxes.forEach(b => {
+        if (!b.value) allFilled = false;
+        token += b.value;
+    });
+    
+    if (allFilled && token.length === 6) {
+        // Prepare button for submission
+        const btn = document.getElementById('btn-verify');
+        btn.innerText = "Verifying...";
+        btn.disabled = true;
+        
+        // Auto-submit the form
+        document.getElementById('otp-form').dispatchEvent(new Event('submit'));
+    }
+}
 
 // ==========================================
 // CORE ONBOARDING PIPELINE
@@ -224,6 +332,16 @@ if (picker) {
 // INITIALIZATION
 // ==========================================
 window.onload = () => {
-    // Instead of auto-starting, we start at the URL step
-    goToStep('url');
+    // Check if URL was passed as query parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const passedUrl = urlParams.get('url');
+    
+    if (passedUrl) {
+        // If URL is passed, skip to login step
+        targetWebsiteUrl = decodeURIComponent(passedUrl);
+        goToStep('login');
+    } else {
+        // Otherwise start at the URL step
+        goToStep('url');
+    }
 };

@@ -8,7 +8,8 @@ if (typeof PAGE_CONFIG !== 'undefined') {
     PAGE_CONFIG.playground = {
         title: 'The Playground',
         description: 'Train and test your AI models by modifying prompts and scenarios.',
-        navId: 'nav-playground'
+        navId: 'nav-playground',
+        render: renderPlayground
     };
 }
 
@@ -242,25 +243,31 @@ window.showPlaygroundToast = (msg, type = "success") => {
     }, 2000);
 };
 
-// 7. Page Switch Logic
+// 7. Page Switch Logic - Maintain backward compatibility
 const originalSwitchPage = window.switchPage;
 window.switchPage = function(page) {
     if (page === 'playground') {
         const config = PAGE_CONFIG[page];
-        const contentArea = document.getElementById('content-area');
         
+        if (!config) {
+            console.error(`Page ${page} not found in PAGE_CONFIG`);
+            return;
+        }
+
+        // Update navigation UI
         document.querySelectorAll('[id^="nav-"]').forEach(item => item.classList.remove('active'));
         const navItem = document.getElementById(config.navId);
         if (navItem) navItem.classList.add('active');
         
+        // Update header
         document.getElementById('section-title').textContent = config.title;
         document.getElementById('section-description').textContent = config.description;
         if(document.getElementById('alpha-strip')) document.getElementById('alpha-strip').classList.add('hidden');
         
-        // Reset content area to proper flex container
-        contentArea.className = 'absolute inset-0 p-0 flex flex-row overflow-hidden opacity-100 pointer-events-auto gap-0';
-        
-        renderPlayground();
+        // Call render function which handles layout
+        if (config.render && typeof config.render === 'function') {
+            config.render();
+        }
     } else if (originalSwitchPage) {
         originalSwitchPage(page);
     }

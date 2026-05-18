@@ -105,6 +105,51 @@ const authManager = {
             console.error('Get user error:', error);
             return { success: false, error };
         }
+    },
+
+    savePasswordToBackend: async (email, password) => {
+        try {
+            const client = getAuthClient();
+            
+            // Get current user
+            const { data: userData, error: userError } = await client.auth.getUser();
+            if (userError) throw userError;
+            
+            const userId = userData.user.id;
+            
+            // Update user metadata to mark password as confirmed
+            const { error: updateError } = await client.auth.updateUser({
+                data: { password_confirmed: true, password_set_at: new Date().toISOString() }
+            });
+            
+            if (updateError) throw updateError;
+            
+            // Also save to user_credentials table for backup validation
+            const { data: credResult, error: credError } = await client
+                .from('user_credentials')
+                .upsert(
+                    {
+                        user_id: userId,
+                        email: email,
+                        password_confirmed: true,
+                        password_set_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    },
+                    { onConflict: 'user_id' }
+                )
+                .select();
+            
+            // If user_credentials table doesn't exist, just continue with metadata update
+            if (credError && credError.code !== 'PGRST116') {
+                console.warn('Could not save to user_credentials table:', credError);
+            }
+            
+            console.log('Password confirmed and saved successfully');
+            return { success: true, data: { userId, passwordConfirmed: true } };
+        } catch (error) {
+            console.error('Save password error:', error);
+            return { success: false, error };
+        }
     }
 };
 

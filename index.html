@@ -205,12 +205,12 @@
                 <!-- MAIN Hero CTA -->
                 <div
                     class="flex hero-cta-container items-center justify-center lg:justify-start gap-3 p-2 rounded-full border border-gray-200/50 bg-white/50 backdrop-blur-sm shadow-inner shadow-gray-100 max-w-md mx-auto lg:mx-0">
-                    <input type="url" placeholder="Your website URL"
+                    <input type="url" id="hero-url-input" placeholder="Your website URL"
                         class="hero-cta-input flex-grow bg-transparent px-5 py-3.5 rounded-full text-sm focus:ring-2 focus:ring-[#28A745] focus:outline-none transition-all placeholder-gray-400">
-                    <a href="get-started.html"
+                    <button onclick="handleHeroGetStarted()"
                         class="hero-cta-btn btn-green-serious px-8 py-3.5 rounded-full text-lg font-semibold whitespace-nowrap">
                         Get Started
-                    </a>
+                    </button>
                 </div>
             </div>
 
@@ -551,12 +551,12 @@
 
             <div
                 class="flex hero-cta-container items-center justify-center gap-3 p-2 rounded-full border border-gray-200/50 bg-white/80 backdrop-blur-md shadow-xl max-w-lg mx-auto">
-                <input type="url" placeholder="Your website URL"
+                <input type="url" id="footer-url-input" placeholder="Your website URL"
                     class="hero-cta-input flex-grow bg-transparent px-5 py-3.5 rounded-full text-sm focus:ring-2 focus:ring-[#28A745] focus:outline-none transition-all placeholder-gray-400">
-                <a href="get-started.html"
+                <button onclick="handleFooterGetStarted()"
                     class="hero-cta-btn btn-green-serious px-8 py-3.5 rounded-full text-lg font-semibold whitespace-nowrap">
                     Get Started
-                </a>
+                </button>
             </div>
         </div>
     </section>
@@ -625,6 +625,63 @@
 
     <script src="initSupabase.js"></script>
     <script src="js/supabaseClient.js"></script>
+
+    <script>
+        function handleHeroGetStarted() {
+            const url = document.getElementById('hero-url-input').value.trim();
+            if (!url) {
+                window.location.href = 'get-started.html';
+                return;
+            }
+            
+            // Add https:// if not already present
+            let fullUrl = url;
+            if (!fullUrl.startsWith('http://') && !fullUrl.startsWith('https://')) {
+                fullUrl = 'https://' + fullUrl;
+            }
+            
+            // Validate the URL
+            try {
+                new URL(fullUrl);
+                window.location.href = 'get-started.html?url=' + encodeURIComponent(fullUrl) + '&skip=url';
+            } catch (err) {
+                alert('Please enter a valid URL (e.g., yourbusiness.com)');
+            }
+        }
+
+        function handleFooterGetStarted() {
+            const url = document.getElementById('footer-url-input').value.trim();
+            if (!url) {
+                window.location.href = 'get-started.html';
+                return;
+            }
+            
+            // Add https:// if not already present
+            let fullUrl = url;
+            if (!fullUrl.startsWith('http://') && !fullUrl.startsWith('https://')) {
+                fullUrl = 'https://' + fullUrl;
+            }
+            
+            // Validate the URL
+            try {
+                new URL(fullUrl);
+                window.location.href = 'get-started.html?url=' + encodeURIComponent(fullUrl) + '&skip=url';
+            } catch (err) {
+                alert('Please enter a valid URL (e.g., yourbusiness.com)');
+            }
+        }
+
+        // Allow Enter key to submit
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('hero-url-input')?.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') handleHeroGetStarted();
+            });
+            document.getElementById('footer-url-input')?.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') handleFooterGetStarted();
+            });
+        });
+    </script>
+
 </body>
 
 </html>

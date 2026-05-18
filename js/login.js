@@ -17,17 +17,18 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     btn.innerText = "Verifying...";
     btn.disabled = true;
 
-    // STEP 1: Verify Password
+    // STEP 1: Verify Password (existing users only)
     const loginResult = await authManager.signInWithPassword(email, password);
     
     if (!loginResult.success) {
         notify(loginResult.error.message);
         btn.innerText = "Sign In";
         btn.disabled = false;
+        console.error('Login error:', loginResult.error);
         return;
     }
 
-    // STEP 2: Password is correct, now trigger the OTP challenge
+    // STEP 2: Password is correct, now trigger OTP
     tempEmail = email; 
     const otpResult = await authManager.signInWithOtp(tempEmail);
 
@@ -35,6 +36,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
         notify("Password correct, but could not send code: " + otpResult.error.message);
         btn.innerText = "Sign In";
         btn.disabled = false;
+        console.error('OTP error:', otpResult.error);
     } else {
         // STEP 3: Switch to the OTP screen
         document.getElementById('display-email').textContent = tempEmail;
@@ -52,18 +54,26 @@ document.getElementById('otp-form').addEventListener('submit', async (e) => {
 
     if (token.length < 6) return notify("Please enter the full 6-digit code");
 
-    btn.innerText = "Authenticating...";
+    // Visual feedback - show verifying immediately
+    btn.innerText = "Verifying...";
+    btn.disabled = true;
 
     const result = await authManager.verifyOtp(tempEmail, token, 'email');
     
     if (!result.success) {
+        // Log exact error to console
+        console.error('OTP Verification Failed:', result.error);
         notify("Invalid code. Please try again.");
         btn.innerText = "Verify & Sign In";
+        btn.disabled = false;
         otpBoxes.forEach(b => b.value = '');
         otpBoxes[0].focus();
     } else {
         notify("Identity verified!", false);
-        window.location.href = '/dashboard'; 
+        // Redirect after a brief delay to show the success message
+        setTimeout(() => {
+            window.location.href = '/dashboard'; 
+        }, 500);
     }
 });
 
@@ -100,12 +110,67 @@ function toggleScreens(toOtp) {
 
 document.getElementById('btn-back').onclick = () => toggleScreens(false);
 
-// Auto-focus OTP boxes logic
+// Auto-focus OTP boxes logic + Paste support + Auto-verify
 otpBoxes.forEach((box, i) => {
+    // Handle regular input (typing)
     box.addEventListener('input', (e) => {
         if (box.value && i < 5) otpBoxes[i + 1].focus();
+        
+        // Auto-verify when all boxes are filled
+        checkAndAutoVerify();
     });
+
+    // Handle backspace for navigation
     box.addEventListener('keydown', (e) => {
-        if (e.key === 'Backspace' && !box.value && i > 0) otpBoxes[i - 1].focus();
+        if (e.key === 'Backspace' && !box.value && i > 0) {
+            otpBoxes[i - 1].focus();
+        }
     });
+
+    // Handle paste event (only on first box)
+    if (i === 0) {
+        box.addEventListener('paste', (e) => {
+            e.preventDefault();
+            
+            // Get clipboard content
+            const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+            
+            // Extract only digits from the pasted content
+            const digits = pastedText.replace(/\D/g, '').slice(0, 6);
+            
+            // Distribute digits across the OTP boxes
+            digits.split('').forEach((digit, index) => {
+                if (index < 6) {
+                    otpBoxes[index].value = digit;
+                }
+            });
+            
+            // Focus on the next empty box or last box
+            const nextEmptyIndex = digits.length < 6 ? digits.length : 5;
+            otpBoxes[nextEmptyIndex].focus();
+            
+            // Auto-verify if all boxes are filled
+            checkAndAutoVerify();
+        });
+    }
 });
+
+// Auto-verify function: checks if all boxes are filled and submits
+function checkAndAutoVerify() {
+    let allFilled = true;
+    let token = '';
+    otpBoxes.forEach(b => {
+        if (!b.value) allFilled = false;
+        token += b.value;
+    });
+    
+    if (allFilled && token.length === 6) {
+        // Prepare button for submission
+        const btn = document.getElementById('btn-verify');
+        btn.innerText = "Verifying...";
+        btn.disabled = true;
+        
+        // Auto-submit the form
+        document.getElementById('otp-form').dispatchEvent(new Event('submit'));
+    }
+}

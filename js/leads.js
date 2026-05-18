@@ -260,3 +260,13 @@ function closeDrawers() {
 function renderLeadsContent() {
     renderLeadsList();
 }
+
+// Register Leads page configuration
+if (typeof PAGE_CONFIG !== 'undefined') {
+    PAGE_CONFIG.leads = {
+        title: 'Leads',
+        description: 'Manage and track all your leads.',
+        navId: 'nav-leads',
+        render: renderLeadsContent
+    };
+}
