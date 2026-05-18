@@ -8,7 +8,8 @@ window.PAGE_CONFIG = {
     analytics: {
         title: 'Analytics',
         description: 'Overview of your business performance.',
-        navId: 'nav-analytics'
+        navId: 'nav-analytics',
+        render: renderAnalytics
     },
     leads: {
         title: 'Leads',
@@ -38,6 +39,26 @@ function renderAnalytics() {
     `;
 }
 
+let pageLoadTimer = null;
+
+function showSectionLoader() {
+    const skeleton = document.getElementById('skeleton-loader');
+    const contentArea = document.getElementById('content-area');
+    if (skeleton) skeleton.style.display = 'block';
+    if (contentArea) {
+        contentArea.classList.add('opacity-0', 'pointer-events-none');
+    }
+}
+
+function hideSectionLoader() {
+    const skeleton = document.getElementById('skeleton-loader');
+    const contentArea = document.getElementById('content-area');
+    if (skeleton) skeleton.style.display = 'none';
+    if (contentArea) {
+        contentArea.classList.remove('opacity-0', 'pointer-events-none');
+    }
+}
+
 // Switch page function
 window.switchPage = function(page) {
     const config = PAGE_CONFIG[page];
@@ -64,10 +85,21 @@ window.switchPage = function(page) {
     if (sectionTitle) sectionTitle.textContent = config.title;
     if (sectionDescription) sectionDescription.textContent = config.description;
 
-    // Render the page
-    if (config.render && typeof config.render === 'function') {
-        config.render();
+    // Show loader for every navigation switch
+    showSectionLoader();
+
+    if (pageLoadTimer) {
+        clearTimeout(pageLoadTimer);
+        pageLoadTimer = null;
     }
+
+    pageLoadTimer = setTimeout(() => {
+        if (config.render && typeof config.render === 'function') {
+            config.render();
+        }
+        hideSectionLoader();
+        pageLoadTimer = null;
+    }, 300);
 };
 
 // Initialize navigation on page load
