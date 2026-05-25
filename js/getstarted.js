@@ -232,7 +232,7 @@ function checkAndAutoVerify() {
 }
 
 // ==========================================
-// CORE ONBOARDING PIPELINE
+// CORE ONBOARDING PIPELINE (UPDATED FIELDS)
 // ==========================================
 async function startOnboarding(websiteUrl) {
     try {
@@ -248,7 +248,8 @@ async function startOnboarding(websiteUrl) {
 
         if (error) throw error;
 
-        currentBusinessId = data.business_id;
+        // FIXED: Match the exact keys returned by the orchestrator response
+        currentBusinessId = data.sasa_business_id; 
         currentInstanceName = data.instance_name;
 
         // Update the QR code image in the WhatsApp step
@@ -264,7 +265,6 @@ async function startOnboarding(websiteUrl) {
         updateProgress(0, "Setup failed. Please try again.");
     }
 }
-
 // ==========================================
 // WHATSAPP CONNECTION POLLING
 // ==========================================
