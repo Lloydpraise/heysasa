@@ -5,6 +5,12 @@
 
 // Global page configuration (will be extended by individual page scripts)
 window.PAGE_CONFIG = {
+    overview: {
+        title: 'Overview',
+        description: 'A high-level view of your system operations.',
+        navId: 'nav-overview',
+        render: window.renderOverview // Pulls from overview.js
+    },
     analytics: {
         title: 'Analytics',
         description: 'Overview of your business performance.',
@@ -120,5 +126,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Set initial page to analytics
-    switchPage('analytics');
+    switchPage('overview');
 });
