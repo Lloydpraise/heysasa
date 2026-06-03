@@ -1,14 +1,7 @@
-// Mock Data (To be replaced by Supabase)
-const mockProducts = [
-    { id: 1, title: "Classic Green Hoodie", description: "Soft cotton blend, perfect for winter.", price: 2500, img: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400", status: "added" },
-    { id: 2, title: "Tech Runner Sneakers", description: "Lightweight and breathable fabric.", price: 4200, img: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400", status: "discovered" },
-    { id: 3, title: "Minimalist Watch", description: "Elegant design with leather strap.", price: 1800, img: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400", status: "added" },
-    { id: 4, title: "Wireless Noise-Canceling Earbuds", description: "Crystal clear sound with deep bass.", price: 6500, img: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400", status: "added" },
-    { id: 5, title: "Vintage Denim Jacket", description: "Classic retro wash, durable denim.", price: 3200, img: "https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=400", status: "discovered" },
-    { id: 6, title: "Smart Home Speaker", description: "Voice-activated assistant with 360 audio.", price: 5500, img: "https://images.unsplash.com/photo-1589492477829-5e65395b66cc?w=400", status: "added" },
-    { id: 7, title: "Premium Leather Backpack", description: "Spacious interior with laptop compartment.", price: 4800, img: "https://images.unsplash.com/photo-1491637639811-60e2756cc1c7?w=400", status: "discovered" },
-    { id: 8, title: "Polarized Aviator Sunglasses", description: "UV400 protection with metal frame.", price: 1500, img: "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=400", status: "added" }
-];
+// Live Data State
+let products = [];
+let isInitialized = false;
+let isLoading = false;
 
 let currentTab = 'added'; // 'added' or 'discovered'
 let currentView = 'image'; // 'image' or 'list'
@@ -19,9 +12,9 @@ let cardObserver = null; // Intersection Observer for scroll animations
 // Initialize Intersection Observer for lazy loading images
 function initLazyLoadingObserver() {
     const observerOptions = {
-        root: null, // viewport
-        rootMargin: '50px', // Start loading 50px before image enters viewport
-        threshold: 0.01 // Trigger when even 1% of image is visible
+        root: null,
+        rootMargin: '50px',
+        threshold: 0.01
     };
 
     imageObserver = new IntersectionObserver((entries) => {
@@ -31,7 +24,7 @@ function initLazyLoadingObserver() {
                 if (img.dataset.src) {
                     img.src = img.dataset.src;
                     img.removeAttribute('data-src');
-                    img.classList.add('lazy-loaded'); // Add class for fade-in animation
+                    img.classList.add('lazy-loaded');
                     imageObserver.unobserve(img);
                 }
             }
@@ -43,7 +36,7 @@ function initLazyLoadingObserver() {
 function initCardAnimationObserver() {
     const observerOptions = {
         root: null,
-        rootMargin: '0px 0px -40px 0px', // Trigger slightly before it hits the bottom
+        rootMargin: '0px 0px -40px 0px',
         threshold: 0.1
     };
 
@@ -51,34 +44,54 @@ function initCardAnimationObserver() {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 entry.target.classList.add('card-visible');
-                cardObserver.unobserve(entry.target); // Only animate once
+                cardObserver.unobserve(entry.target);
             }
         });
     }, observerOptions);
 }
 
-// Apply lazy loading to all images with data-src attribute
 function applyLazyLoading() {
     if (!imageObserver) initLazyLoadingObserver();
-    
     const lazyImages = document.querySelectorAll('img[data-src]');
     lazyImages.forEach(img => {
         imageObserver.observe(img);
     });
 }
 
-// Apply scroll animations to cards
 function applyCardAnimations() {
     if (!cardObserver) initCardAnimationObserver();
-    
     const cards = document.querySelectorAll('.animate-card');
     cards.forEach(card => {
         cardObserver.observe(card);
     });
 }
 
-function renderProductsPage() {
-    // Inject dynamic styles strictly for the staggered scroll animations
+// Main execution function
+async function renderProductsPage() {
+    const container = document.getElementById('content-area');
+    container.classList.remove('items-center', 'justify-center');
+    container.classList.add('flex-col', 'overflow-y-auto');
+
+    // Get current business ID from your app session/localStorage
+    const businessId = localStorage.getItem('current_business_id') || 'default';
+
+    // Live Database Fetching (Runs only once on page entry, avoids db spam on search keystrokes)
+    if (!isInitialized && !isLoading) {
+        isLoading = true;
+        container.innerHTML = `
+            <div class="flex items-center justify-center py-20 text-gray-400 font-medium text-sm">
+                <svg class="animate-spin h-5 w-5 mr-3 text-green-600" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                Loading product catalog...
+            </div>`;
+        
+        const response = await productService.fetchProducts(businessId);
+        if (response.success) {
+            products = response.data;
+            isInitialized = true;
+        }
+        isLoading = false;
+    }
+
     if (!document.getElementById('staggered-scroll-styles')) {
         const style = document.createElement('style');
         style.id = 'staggered-scroll-styles';
@@ -86,23 +99,15 @@ function renderProductsPage() {
             .animate-card { opacity: 0; transform: translateY(40px); transition: opacity 0.5s ease-out, transform 0.5s ease-out !important; }
             .animate-card .anim-desc { opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease-out 0.3s, transform 0.5s ease-out 0.3s !important; }
             .animate-card .anim-img { opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease-out 0.6s, transform 0.5s ease-out 0.6s !important; }
-            
             .animate-card.card-visible { opacity: 1; transform: translateY(0); }
             .animate-card.card-visible .anim-desc { opacity: 1; transform: translateY(0); }
             .animate-card.card-visible .anim-img { opacity: 1; transform: translateY(0); }
         `;
         document.head.appendChild(style);
     }
-
-    const container = document.getElementById('content-area');
-    
-    // Remove centering classes to ensure search bar stays at top
-    container.classList.remove('items-center', 'justify-center');
-    container.classList.add('flex-col', 'overflow-y-auto');
     
     container.innerHTML = `
         <div class="flex flex-col gap-6 w-full max-w-full overflow-x-hidden p-1">
-            
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div class="relative flex-1 min-w-[280px]">
                     <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">
@@ -112,22 +117,22 @@ function renderProductsPage() {
                         type="text" 
                         placeholder="Search by title or description..." 
                         value="${searchQuery}"
-                        oninput="handleSearch(this.value)"
+                        oninput="window.handleSearch(this.value)"
                         class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 transition-all"
                     >
                 </div>
 
                 <div class="flex bg-gray-100 p-1 rounded-2xl w-fit shrink-0">
-                    <button onclick="switchTab('added')" class="px-4 sm:px-6 py-2 rounded-xl text-xs font-bold transition-all ${currentTab === 'added' ? 'bg-white shadow-sm text-green-600' : 'text-gray-400'}">Added Products</button>
-                    <button onclick="switchTab('discovered')" class="px-4 sm:px-6 py-2 rounded-xl text-xs font-bold transition-all ${currentTab === 'discovered' ? 'bg-white shadow-sm text-green-600' : 'text-gray-400'}">Discovered</button>
+                    <button onclick="window.switchTab('added')" class="px-4 sm:px-6 py-2 rounded-xl text-xs font-bold transition-all ${currentTab === 'added' ? 'bg-white shadow-sm text-green-600' : 'text-gray-400'}">Added Products</button>
+                    <button onclick="window.switchTab('discovered')" class="px-4 sm:px-6 py-2 rounded-xl text-xs font-bold transition-all ${currentTab === 'discovered' ? 'bg-white shadow-sm text-green-600' : 'text-gray-400'}">Discovered</button>
                 </div>
 
                 <div class="flex items-center gap-3 flex-wrap">
                     <div class="flex bg-white border border-gray-100 rounded-xl overflow-hidden">
-                        <button onclick="switchView('list')" class="p-2 ${currentView === 'list' ? 'bg-gray-50 text-green-600' : 'text-gray-400'}">
+                        <button onclick="window.switchView('list')" class="p-2 ${currentView === 'list' ? 'bg-gray-50 text-green-600' : 'text-gray-400'}">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                         </button>
-                        <button onclick="switchView('image')" class="p-2 ${currentView === 'image' ? 'bg-gray-50 text-green-600' : 'text-gray-400'}">
+                        <button onclick="window.switchView('image')" class="p-2 ${currentView === 'image' ? 'bg-gray-50 text-green-600' : 'text-gray-400'}">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg>
                         </button>
                     </div>
@@ -144,14 +149,12 @@ function renderProductsPage() {
         </div>
     `;
     
-    // Initialize lazy loading and animations sequentially after DOM renders
     requestAnimationFrame(() => {
         applyLazyLoading();
         applyCardAnimations();
     });
 }
 
-// Logic for Search
 function handleSearch(query) {
     searchQuery = query.toLowerCase();
     renderProductsPage();
@@ -167,9 +170,21 @@ function switchView(view) {
     renderProductsPage();
 }
 
-// Helper to filter products based on tab and search query
+// Handle Database Row Deletion
+async function handleDeleteProduct(productId) {
+    if (!confirm("Are you sure you want to permanently delete this product?")) return;
+
+    const response = await productService.deleteProduct(productId);
+    if (response.success) {
+        products = products.filter(p => p.id !== productId);
+        renderProductsPage();
+    } else {
+        alert("Error deleting product: " + response.error);
+    }
+}
+
 function getFilteredProducts() {
-    return mockProducts.filter(p => {
+    return products.filter(p => {
         const matchesTab = p.status === currentTab;
         const matchesSearch = p.title.toLowerCase().includes(searchQuery) || 
                               p.description.toLowerCase().includes(searchQuery);
@@ -179,7 +194,6 @@ function getFilteredProducts() {
 
 function renderImageView() {
     const filtered = getFilteredProducts();
-    
     if (filtered.length === 0) return `<p class="text-center text-gray-400 py-10">No products found.</p>`;
 
     return `
@@ -194,7 +208,7 @@ function renderImageView() {
                             </button>
                             <div id="menu-img-${p.id}" class="hidden absolute right-0 mt-2 w-28 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-20">
                                 <button class="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 text-gray-700 transition-colors">Edit</button>
-                                <button class="w-full text-left px-4 py-2 text-xs hover:bg-red-50 text-red-600 border-t border-gray-50 transition-colors">Delete</button>
+                                <button onclick="window.handleDeleteProduct('${p.id}')" class="w-full text-left px-4 py-2 text-xs hover:bg-red-50 text-red-600 border-t border-gray-50 transition-colors">Delete</button>
                             </div>
                         </div>
                     </div>
@@ -213,7 +227,6 @@ function renderImageView() {
 
 function renderListView() {
     const filtered = getFilteredProducts();
-
     if (filtered.length === 0) return `<p class="text-center text-gray-400 py-10">No products found.</p>`;
     
     return `
@@ -247,7 +260,7 @@ function renderListView() {
                                     <button onclick="document.getElementById('menu-list-${p.id}').classList.toggle('hidden')" onblur="setTimeout(() => document.getElementById('menu-list-${p.id}').classList.add('hidden'), 200)" class="text-gray-400 hover:text-gray-800 transition-colors font-bold text-xl px-2">⋮</button>
                                     <div id="menu-list-${p.id}" class="hidden absolute right-4 top-8 w-28 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-20">
                                         <button class="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 text-gray-700 transition-colors">Edit</button>
-                                        <button class="w-full text-left px-4 py-2 text-xs hover:bg-red-50 text-red-600 border-t border-gray-50 transition-colors">Delete</button>
+                                        <button onclick="window.handleDeleteProduct('${p.id}')" class="w-full text-left px-4 py-2 text-xs hover:bg-red-50 text-red-600 border-t border-gray-50 transition-colors">Delete</button>
                                     </div>
                                 </div>
                             </td>
@@ -258,6 +271,12 @@ function renderListView() {
         </div>
     `;
 }
+
+// Bind local functions to global scope to keep onclick handlers functional
+window.handleSearch = handleSearch;
+window.switchTab = switchTab;
+window.switchView = switchView;
+window.handleDeleteProduct = handleDeleteProduct;
 
 // Register Products page configuration
 if (typeof PAGE_CONFIG !== 'undefined') {

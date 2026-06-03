@@ -162,6 +162,63 @@
             .hero-cta-btn {
                 width: 100%;
             }
+
+            /* Mobile navbar adjustments */
+            .nav-desktop-buttons {
+                display: none;
+            }
+
+            .nav-mobile-buttons {
+                display: flex;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .nav-mobile-buttons {
+                display: none;
+            }
+
+            .nav-desktop-buttons {
+                display: flex;
+            }
+        }
+
+        /* Mobile button styles */
+        .nav-mobile-buttons {
+            gap: 0.75rem;
+            width: 100%;
+            justify-content: flex-end;
+        }
+
+        .nav-mobile-btn {
+            padding: 0.625rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            text-decoration: none;
+        }
+
+        .nav-mobile-btn-login {
+            background-color: transparent;
+            color: #374151;
+            border: 1px solid #D1D5DB;
+        }
+
+        .nav-mobile-btn-login:active {
+            background-color: #F3F4F6;
+        }
+
+        .nav-mobile-btn-cta {
+            background-color: #28A745;
+            color: white;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
+        .nav-mobile-btn-cta:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
         }
     </style>
 </head>
@@ -178,10 +235,18 @@
                 <a href="#how-it-works" class="text-gray-600 hover:text-[#28A745] transition">How it Works</a>
                 <a href="#pricing" class="text-gray-600 hover:text-[#28A745] transition">Pricing</a>
             </div>
-            <div>
+            
+            <!-- Desktop Buttons -->
+            <div class="nav-desktop-buttons">
                 <a href="login.html" class="text-sm font-medium text-gray-700 mr-4 hover:text-gray-900">Log in</a>
                 <a href="get-started.html" class="btn-green-serious px-5 py-2.5 rounded-full text-sm font-semibold">Get
                     Started</a>
+            </div>
+
+            <!-- Mobile Buttons -->
+            <div class="nav-mobile-buttons">
+                <a href="login.html" class="nav-mobile-btn nav-mobile-btn-login">Log in</a>
+                <a href="get-started.html" class="nav-mobile-btn nav-mobile-btn-cta">Get Started</a>
             </div>
         </div>
     </nav>

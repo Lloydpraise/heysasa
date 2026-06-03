@@ -1,11 +1,12 @@
-// ─── Mock Overview Data ───────────────────────────────────────────────────────
+// ─── Mock Overview & Onboarding Data ──────────────────────────────────────────
 const overviewData = {
     businessName: "Parem Agencies",
-    creditBalance: 1500, // Try changing this to 150 to see the red warning
+    creditBalance: 0,
     whatsappConnected: false,
-    processedLeads: 30,
+    processedLeads: 0,
     unprocessedLeads: 470,
-    contactsLocked: 45
+    contactsLocked: 45,
+    onboardingStep: 1 // 1: Credits, 2: Create AI, 3: Process Leads, 4: Follow-ups, 5: Products, 6: Done
 };
 
 // ─── Modal & Action Logic ─────────────────────────────────────────────────────
@@ -63,24 +64,59 @@ window.closePaymentModal = function() {
     }, 200);
 };
 
+// Onboarding specific actions
 window.processPayment = function() {
     overviewData.creditBalance += 1000;
+    overviewData.onboardingStep = 2; // Move to next step
     closePaymentModal();
     setTimeout(() => {
         renderOverviewContent();
-        showToast('Account successfully topped up with KES 1000');
+        showToast('Account successfully topped up with KES 1000!');
     }, 250);
 };
 
+window.completeCreateAI = function() {
+    overviewData.onboardingStep = 3;
+    renderOverviewContent();
+    showToast('AI Agent successfully created!');
+};
+
+window.completeProcessLeads = function() {
+    overviewData.processedLeads = 30; // Free account limit demo
+    overviewData.unprocessedLeads -= 30;
+    overviewData.onboardingStep = 4;
+    renderOverviewContent();
+    showToast('30 Leads Processed! Your data mine is unlocked.');
+};
+
+window.completeFollowUps = function() {
+    overviewData.onboardingStep = 5;
+    renderOverviewContent();
+    showToast('Follow-up preferences saved!');
+};
+
+window.completeProducts = function() {
+    overviewData.onboardingStep = 6; // All done!
+    renderOverviewContent();
+    showToast('Products seeded! Onboarding complete.');
+};
+
+
 function showToast(message) {
-    const toast = document.getElementById('success-toast');
-    if (toast) {
-        toast.querySelector('span').innerText = message;
-        toast.classList.remove('translate-y-20', 'opacity-0');
-        setTimeout(() => {
-            toast.classList.add('translate-y-20', 'opacity-0');
-        }, 3000);
+    let toast = document.getElementById('success-toast');
+    if (!toast) {
+        // Create toast if it doesn't exist
+        toast = document.createElement('div');
+        toast.id = 'success-toast';
+        toast.className = 'fixed bottom-4 right-4 bg-[#28A745] text-white px-6 py-3 rounded-xl font-bold shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-[999]';
+        toast.innerHTML = `<span></span>`;
+        document.body.appendChild(toast);
     }
+    toast.querySelector('span').innerText = message;
+    toast.classList.remove('translate-y-20', 'opacity-0');
+    setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+    }, 3000);
 }
 
 // ─── Main Render Function ─────────────────────────────────────────────────────
@@ -88,137 +124,131 @@ function showToast(message) {
 function renderOverviewContent() {
     const contentArea = document.getElementById('content-area');
     
-    // Logic for dynamic display
-    const creditColor = overviewData.creditBalance < 200 ? 'text-red-500' : 'text-[#28A745]';
-    const creditBg = overviewData.creditBalance < 200 ? 'bg-red-500' : 'bg-[#28A745]';
-    const creditGlow = overviewData.creditBalance < 200 ? 'shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'shadow-[0_0_8px_rgba(40,167,69,0.5)]';
-    
-    const totalLeads = overviewData.processedLeads + overviewData.unprocessedLeads;
-    const leadsPercentage = totalLeads === 0 ? 0 : (overviewData.processedLeads / totalLeads) * 100;
-    
     contentArea.className = 'absolute inset-0 z-10 p-4 md:p-8 overflow-y-auto custom-scrollbar flex items-start justify-center opacity-100 pointer-events-auto transition-opacity duration-700';
     
-    contentArea.innerHTML = `
-        <div class="flex flex-col gap-6 w-full max-w-5xl mx-auto pb-10">
-            
-            <!-- Top Header Area -->
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
-                <div>
-                    <h1 class="text-2xl md:text-3xl font-extrabold text-[#0F172A] tracking-tight">Overview</h1>
-                    <p class="text-sm text-slate-500 font-medium mt-1">Manage your business operations for <span class="text-[#0F172A] font-bold">${overviewData.businessName}</span>.</p>
+    // Define steps
+    const steps = [
+        {
+            id: 1,
+            title: "Load Credits",
+            desc: "Add KES 1000 minimum commitment to unlock high-value AI systems and start sending messages.",
+            btnText: "Add Funds (KES 1000)",
+            action: "openPaymentModal()",
+            icon: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`
+        },
+        {
+            id: 2,
+            title: "Create Your AI",
+            desc: "Provide basic info to generate a personalized AI that perfectly responds on your behalf.",
+            btnText: "Generate AI",
+            action: "completeCreateAI()",
+            icon: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>`
+        },
+        {
+            id: 3,
+            title: "Process All Leads",
+            desc: "Process 30 free leads now. Discover the goldmine of data sitting in your WhatsApp history.",
+            btnText: "Process 30 Leads",
+            action: "completeProcessLeads()",
+            icon: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>`
+        },
+        {
+            id: 4,
+            title: "Configure Follow-ups",
+            desc: "Tell us how you'd like your friendly AI to handle automated follow-ups. We do the heavy lifting.",
+            btnText: "Set Preferences",
+            action: "completeFollowUps()",
+            icon: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>`
+        },
+        {
+            id: 5,
+            title: "Process & Add Products",
+            desc: "Seed 10 products instantly to finish setup. Just click process, then add.",
+            btnText: "Process & Add",
+            action: "completeProducts()",
+            icon: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>`
+        }
+    ];
+
+    let stepsHTML = '';
+    
+    if (overviewData.onboardingStep > 5) {
+        stepsHTML = `
+            <div class="glass-card p-8 text-center flex flex-col items-center justify-center py-16">
+                <div class="w-20 h-20 bg-[#28A745]/20 rounded-full flex items-center justify-center mb-6">
+                    <svg class="w-10 h-10 text-[#28A745]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
                 </div>
+                <h2 class="text-3xl font-black text-[#0F172A] mb-2">You're All Set!</h2>
+                <p class="text-slate-500 font-medium max-w-md">Your AI systems are armed and ready. Dashboard unlocking soon...</p>
             </div>
+        `;
+    } else {
+        steps.forEach(step => {
+            const isCompleted = step.id < overviewData.onboardingStep;
+            const isActive = step.id === overviewData.onboardingStep;
+            const isLocked = step.id > overviewData.onboardingStep;
 
-            <!-- Stats Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                
-                <!-- Credit Balance -->
-                <div class="glass-card p-6 flex flex-col justify-between transition-transform duration-200 hover:-translate-y-1 hover:shadow-lg cursor-default group">
-                    <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full ${creditBg} ${creditGlow}"></span>
-                        Credit Balance
-                    </div>
-                    <div class="flex items-center gap-1 mb-2">
-                        <svg class="w-8 h-8 ${creditColor} opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <div class="text-4xl font-black ${creditColor} tracking-tighter">${overviewData.creditBalance.toLocaleString()}</div>
-                    </div>
-                    <div class="text-xs text-slate-500 font-medium">Available KES for AI usage</div>
-                </div>
-
-                <!-- Leads Progress Bar (Replaces old card) -->
-                <div class="glass-card p-6 col-span-1 md:col-span-2 flex flex-col justify-center transition-transform duration-200 hover:-translate-y-1 hover:shadow-lg cursor-default">
-                    <div class="flex justify-between items-end mb-3">
-                        <div class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                            <span class="w-2 h-2 rounded-full bg-[#28A745] shadow-[0_0_8px_rgba(40,167,69,0.4)]"></span>
-                            Lead Processing Pipeline
-                        </div>
-                        <div class="text-right flex items-baseline gap-1">
-                            <span class="text-3xl font-black text-[#28A745]">${overviewData.processedLeads}</span>
-                            <span class="text-sm font-bold text-slate-400">/ ${totalLeads} Processed</span>
-                        </div>
-                    </div>
-                    <div class="w-full h-4 bg-slate-200/50 rounded-full overflow-hidden shadow-inner relative">
-                        <div class="absolute top-0 left-0 h-full bg-gradient-to-r from-[#28A745] to-[#34d058] rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(40,167,69,0.6)]" style="width: ${leadsPercentage}%"></div>
-                    </div>
-                    <div class="flex justify-between mt-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                        <span>0%</span>
-                        <span class="text-slate-500">${overviewData.unprocessedLeads} Pending Interaction</span>
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- Actions Row -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
-                
-                <!-- WhatsApp Status Card -->
-                <div class="glass-card p-6 flex flex-col justify-between relative overflow-hidden group">
-                    <div class="flex justify-between items-start mb-8">
-                        <div>
-                            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                <svg class="w-4 h-4 text-slate-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771z"></path></svg>
-                                Connection Setup
-                            </h3>
-                            <div class="text-xl font-bold text-[#0F172A] flex items-center gap-2">
-                                <span class="relative flex h-3 w-3 mr-1">
-                                  ${overviewData.whatsappConnected ? '<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#25D366] opacity-75"></span>' : ''}
-                                  <span class="relative inline-flex rounded-full h-3 w-3 ${overviewData.whatsappConnected ? 'bg-[#25D366]' : 'bg-red-400'}"></span>
-                                </span>
-                                ${overviewData.whatsappConnected ? 'WhatsApp Linked' : 'No Device Linked'}
+            if (isActive) {
+                // Active Step: Encouraging, large, interactive
+                stepsHTML += `
+                    <div class="glass-card p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 transform transition-all duration-500 shadow-xl border-l-4 border-l-[#0F172A] bg-white">
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 bg-[#0F172A] text-white rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-slate-900/20">
+                                ${step.icon}
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-black text-[#0F172A] mb-1">Step ${step.id}: ${step.title}</h3>
+                                <p class="text-sm font-medium text-slate-500 max-w-lg">${step.desc}</p>
                             </div>
                         </div>
+                        <button onclick="${step.action}" class="w-full md:w-auto px-8 py-3.5 bg-[#0F172A] text-white font-bold rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10 whitespace-nowrap">
+                            ${step.btnText}
+                        </button>
                     </div>
-                    
-                    <button onclick="openWhatsAppModal()" class="w-full py-3.5 ${overviewData.whatsappConnected ? 'bg-white/60 text-[#0F172A] border border-white/80 hover:bg-white' : 'bg-[#25D366] text-white hover:bg-[#128C7E] shadow-lg shadow-[#25D366]/20'} font-bold rounded-xl transition-all flex justify-center items-center gap-2">
-                        <svg class="w-5 h-5 ${overviewData.whatsappConnected ? 'text-[#25D366]' : 'text-white'}" fill="currentColor" viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 1.833 6.371L0 24l5.805-1.523A12 12 0 0 0 11.944 24c6.627 0 12-5.373 12-12S18.571 0 11.944 0zm0 20.254c-1.802 0-3.565-.483-5.112-1.398l-.366-.217-3.8.997.997-3.793-.217-.366A9.742 9.742 0 0 1 2.254 12c0-5.385 4.38-9.765 9.69-9.765 5.385 0 9.765 4.38 9.765 9.765s-4.38 9.765-9.765 9.765z"/></svg>
-                        ${overviewData.whatsappConnected ? 'Manage Connection' : 'Connect WhatsApp'}
-                    </button>
-                </div>
-
-                <!-- Account Funding Card -->
-                <div class="glass-card p-6 flex flex-col justify-between relative overflow-hidden group">
-                    <div class="flex justify-between items-start mb-8">
+                `;
+            } else if (isCompleted) {
+                // Completed Step: Greyed out, small, line-through
+                stepsHTML += `
+                    <div class="p-4 flex items-center gap-4 opacity-50 transform scale-95 transition-all duration-500">
+                        <div class="w-8 h-8 bg-[#28A745] text-white rounded-full flex items-center justify-center shrink-0">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                        </div>
                         <div>
-                            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                Account Funding
-                            </h3>
-                            <div class="text-xl font-bold text-[#0F172A]">Top Up Credits</div>
+                            <h3 class="text-sm font-bold text-slate-500 line-through">Step ${step.id}: ${step.title}</h3>
                         </div>
                     </div>
-                    <button onclick="openPaymentModal()" class="w-full py-3.5 bg-[#0F172A] text-white font-bold rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10 flex justify-center items-center gap-2">
-                        Add Funds
-                    </button>
-                </div>
-
+                `;
+            } else if (isLocked) {
+                // Locked Step: Small, faded, waiting
+                stepsHTML += `
+                    <div class="p-4 flex items-center gap-4 opacity-40 transform scale-95 transition-all duration-500 grayscale">
+                        <div class="w-8 h-8 bg-slate-200 text-slate-400 rounded-full flex items-center justify-center shrink-0 font-bold text-xs">
+                            ${step.id}
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-400">Step ${step.id}: ${step.title}</h3>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+    }
+    
+    contentArea.innerHTML = `
+        <div class="flex flex-col w-full max-w-3xl mx-auto pb-10">
+            
+            <div class="mb-8 text-center md:text-left">
+                <h1 class="text-3xl font-black text-[#0F172A] mb-2 tracking-tight">Let's Get You Set Up</h1>
+                <p class="text-sm text-slate-500 font-medium">Complete this quick checklist (< 5 mins) to launch your system.</p>
             </div>
+
+            <div class="flex flex-col gap-3">
+                ${stepsHTML}
+            </div>
+
         </div>
 
-        <!-- Modals Restrict Render Area -->
-        
-        <!-- WhatsApp Connect Modal -->
-        <div id="wa-modal" class="fixed inset-0 z-[110] flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
-            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onclick="closeWhatsAppModal()"></div>
-            <div id="wa-modal-content" class="glass-card w-full max-w-sm relative z-10 p-8 shadow-2xl border border-white/80 transform scale-95 translate-y-4 opacity-0 transition-all duration-300 ease-out">
-                <div class="w-12 h-12 bg-[#25D366]/10 rounded-full flex items-center justify-center mb-4 mx-auto">
-                    <svg class="w-7 h-7 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 1.833 6.371L0 24l5.805-1.523A12 12 0 0 0 11.944 24c6.627 0 12-5.373 12-12S18.571 0 11.944 0zm0 20.254c-1.802 0-3.565-.483-5.112-1.398l-.366-.217-3.8.997.997-3.793-.217-.366A9.742 9.742 0 0 1 2.254 12c0-5.385 4.38-9.765 9.69-9.765 5.385 0 9.765 4.38 9.765 9.765s-4.38 9.765-9.765 9.765z"/></svg>
-                </div>
-                <h2 class="text-2xl font-black text-center text-[#0F172A] mb-2 tracking-tight">Link WhatsApp</h2>
-                <p class="text-xs text-center text-slate-500 mb-6 font-medium px-4">Open WhatsApp on your phone, go to Linked Devices, and scan this code.</p>
-                
-                <div class="w-full aspect-square bg-white rounded-2xl mb-6 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 shadow-inner">
-                    <svg class="w-16 h-16 text-slate-200 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    <span class="text-xs text-slate-400 font-bold uppercase tracking-widest">QR Code Area</span>
-                </div>
-                
-                <div class="flex gap-3">
-                    <button onclick="closeWhatsAppModal()" class="flex-1 py-3 font-bold text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-xl transition-all">Cancel</button>
-                    <button onclick="simulateWAConnect()" class="flex-1 py-3 bg-[#25D366] text-white font-bold rounded-xl hover:bg-[#128C7E] transition-all shadow-lg shadow-[#25D366]/20">Link Device</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Top-Up / Payment Modal -->
+        <!-- Payment Modal from your original code remains below -->
         <div id="pay-modal" class="fixed inset-0 z-[110] flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
             <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onclick="closePaymentModal()"></div>
             <div id="pay-modal-content" class="glass-card w-full max-w-sm relative z-10 p-8 shadow-2xl border border-white/80 transform scale-95 translate-y-4 opacity-0 transition-all duration-300 ease-out">
@@ -262,8 +292,8 @@ if (document.getElementById('content-area') && typeof PAGE_CONFIG === 'undefined
 // Ensure it hooks into your navigation system if PAGE_CONFIG exists
 if (typeof window.PAGE_CONFIG !== 'undefined') {
     window.PAGE_CONFIG.overview = {
-        title: 'Overview',
-        description: 'Manage your business operations.',
+        title: 'Onboarding',
+        description: 'Get your AI systems up and running in 5min!',
         navId: 'nav-overview',
         render: renderOverviewContent
     };

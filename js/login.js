@@ -865,3 +865,29 @@ if (typeof PAGE_CONFIG !== 'undefined') {
         render:      renderLeadsContent
     };
 }
+
+// ─── Session Persistence & Auth Protection ───────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+    const client = window.getSupabase();
+    if (!client) return;
+
+    // 1. Check if a valid Supabase authentication session exists
+    const { data: { session } } = await client.auth.getSession();
+    
+    if (!session) {
+        console.warn("No active session found. Redirecting to onboarding...");
+        window.location.href = 'getstarted.html';
+        return;
+    }
+
+    // 2. Fetch the stored 8-character business ID context
+    const activeBusinessId = localStorage.getItem('sb_business_id');
+    
+    if (activeBusinessId) {
+        console.log(`Session locked in for: ${session.user.email} (Business ID: ${activeBusinessId})`);
+        // The business context is successfully established for background data fetching!
+    } else {
+        console.warn("User authenticated but no business profile found. Redirecting to setup...");
+        window.location.href = 'getstarted.html';
+    }
+});

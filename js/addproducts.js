@@ -2,13 +2,9 @@
 // AI PRODUCT IMPORTER - IMAGE QUEUE & PROCESSING
 // ==========================================
 
-// Safety Header: Checks if variables are already declared by other scripts
 window.imageQueue = window.imageQueue || []; 
 window.processingInProgress = window.processingInProgress || false;
 window.currentBusinessId = window.currentBusinessId || 'fortunebooks12';
-
-// Note: Local variable declarations removed to prevent conflicts with other scripts
-// Use window.imageQueue, window.processingInProgress, and window.currentBusinessId directly
 
 // Initialize importer on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -28,31 +24,25 @@ function initializeImporter() {
 
 function handleFileSelect(event) {
     const files = Array.from(event.target.files);
-    
     if (files.length === 0) return;
     
-    // Process only the first file (one at a time rule)
     const file = files[0];
     
-    // Validate file type
     if (!file.type.startsWith('image/')) {
         showNotification('Please upload an image file (JPG, PNG, WEBP)', 'error');
         return;
     }
     
-    // Validate file size (max 5MB)
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
         showNotification('Image must be smaller than 5MB', 'error');
         return;
     }
     
-    // Convert to base64
     const reader = new FileReader();
     reader.onload = (e) => {
         const base64String = e.target.result;
         
-        // Add to queue (replace existing if present, keeping only one)
         window.imageQueue = [{
             id: Date.now(),
             file: file,
@@ -60,16 +50,13 @@ function handleFileSelect(event) {
             base64: base64String,
             size: file.size,
             timestamp: new Date(),
-            status: 'pending' // pending, processing, completed, error
+            status: 'pending'
         }];
         
-        // Update UI
         updateQueueDisplay();
         updateReviewCount();
         
-        // Clear the input for next selection
         event.target.value = '';
-        
         showNotification(`Image queued: ${file.name}`, 'success');
     };
     
@@ -86,20 +73,18 @@ function handleFileSelect(event) {
 
 function updateQueueDisplay() {
     const queueList = document.getElementById('aiQueueList');
+    if (!queueList) return;
     
     if (window.imageQueue.length === 0) {
         queueList.innerHTML = `<div id="aiEmptyQueueMsg" class="text-center text-[#94A3B8] text-xs py-10 italic">Queue is empty</div>`;
         return;
     }
     
-    // Remove empty message if present
     const emptyMsg = document.getElementById('aiEmptyQueueMsg');
     if (emptyMsg) emptyMsg.remove();
     
-    // Display queued images
     queueList.innerHTML = window.imageQueue.map((img, index) => `
         <div class="flex items-center gap-3 p-3 bg-white/50 rounded-lg border border-white/60 group hover:bg-white/80 transition-all">
-            <!-- Image Thumbnail -->
             <div class="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 border border-gray-200">
                 <img src="${img.base64}" alt="${img.name}" class="w-full h-full object-cover">
                 ${img.status === 'processing' ? `
@@ -123,14 +108,12 @@ function updateQueueDisplay() {
                 ` : ''}
             </div>
             
-            <!-- Image Info -->
             <div class="flex-1 min-w-0">
                 <p class="text-xs font-bold text-[#0F172A] truncate">${img.name}</p>
                 <p class="text-[10px] text-[#94A3B8]">${formatFileSize(img.size)}</p>
             </div>
             
-            <!-- Remove Button -->
-            <button onclick="removeFromQueue(${img.id})" class="p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 rounded-lg text-red-500">
+            <button onclick="window.removeFromQueue(${img.id})" class="p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 rounded-lg text-red-500">
                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
                 </svg>
@@ -155,7 +138,7 @@ function removeFromQueue(imageId) {
 // ==========================================
 
 async function startAiProcessing() {
-    const businessId = window.currentBusinessId;
+    const businessId = localStorage.getItem('current_business_id') || window.currentBusinessId;
     
     if (window.imageQueue.length === 0) {
         showNotification('No images in queue', 'error');
@@ -170,25 +153,18 @@ async function startAiProcessing() {
     window.processingInProgress = true;
     updateProcessBtn();
     
-    // Process each image in queue
     for (let i = 0; i < window.imageQueue.length; i++) {
         const imageItem = window.imageQueue[i];
-        
-        // Update status to processing
         imageItem.status = 'processing';
         updateQueueDisplay();
         
         try {
-            // Call edge function with base64 image
             const result = await sendImageToAI(imageItem.base64, businessId);
             
             if (result.success) {
                 imageItem.status = 'completed';
                 imageItem.aiData = result.data;
-                
-                // Move to review container
                 addToReviewContainer(imageItem);
-                
                 showNotification(`Image analyzed successfully`, 'success');
             } else {
                 imageItem.status = 'error';
@@ -207,7 +183,6 @@ async function startAiProcessing() {
     window.processingInProgress = false;
     updateProcessBtn();
     
-    // Clear queue after processing
     setTimeout(() => {
         window.imageQueue = [];
         updateQueueDisplay();
@@ -216,17 +191,19 @@ async function startAiProcessing() {
 
 async function sendImageToAI(base64Image, businessId) {
     try {
-        // Extract base64 data (remove data:image/...;base64, prefix)
         const base64Data = base64Image.split(',')[1];
         
-        // Call Supabase edge function
+        // Use global variables or configuration for edge endpoints
+        const url = (typeof SUPABASE_URL !== 'undefined') ? SUPABASE_URL : '';
+        const key = (typeof SUPABASE_ANON_KEY !== 'undefined') ? SUPABASE_ANON_KEY : '';
+
         const response = await fetch(
-            `${SUPABASE_URL}/functions/v1/analyze-product-image`,
+            `${url}/functions/v1/analyze-product-image`,
             {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    'Authorization': `Bearer ${key}`
                 },
                 body: JSON.stringify({
                     image_base64: base64Data,
@@ -236,23 +213,12 @@ async function sendImageToAI(base64Image, businessId) {
         );
         
         const data = await response.json();
-        
         if (!response.ok) {
-            return {
-                success: false,
-                error: data.error || 'Unknown error occurred'
-            };
+            return { success: false, error: data.error || 'Unknown error occurred' };
         }
-        
-        return {
-            success: true,
-            data: data
-        };
+        return { success: true, data: data };
     } catch (error) {
-        return {
-            success: false,
-            error: error.message
-        };
+        return { success: false, error: error.message };
     }
 }
 
@@ -262,24 +228,21 @@ async function sendImageToAI(base64Image, businessId) {
 
 function addToReviewContainer(imageItem) {
     const reviewContainer = document.getElementById('aiReviewContainer');
+    if (!reviewContainer) return;
     
-    // Remove empty state if exists
     const emptyState = reviewContainer.querySelector('.col-span-full');
     if (emptyState && emptyState.textContent.includes('Processed products')) {
         emptyState.remove();
     }
     
-    // Create review card
     const reviewCard = document.createElement('div');
-    reviewCard.className = 'review-card-dashboard p-5 rounded-2xl space-y-4';
+    reviewCard.className = 'review-card-dashboard p-5 rounded-2xl space-y-4 bg-white border border-gray-100 shadow-sm';
     reviewCard.id = `review-${imageItem.id}`;
     reviewCard.innerHTML = `
-        <!-- Product Image -->
         <div class="w-full h-48 rounded-xl overflow-hidden bg-gray-100">
             <img src="${imageItem.base64}" alt="Product" class="w-full h-full object-cover">
         </div>
         
-        <!-- AI-Generated Data -->
         <div class="space-y-3">
             <div>
                 <label class="text-xs font-bold text-[#94A3B8] uppercase tracking-wider block mb-1">Product Name</label>
@@ -317,12 +280,11 @@ function addToReviewContainer(imageItem) {
             </div>
         </div>
         
-        <!-- Action Buttons -->
         <div class="flex gap-2 pt-2">
-            <button onclick="publishProduct(${imageItem.id})" class="flex-1 py-2.5 bg-[#28A745] text-white rounded-lg text-xs font-bold hover:bg-[#208739] transition-all">
+            <button onclick="window.publishProduct(${imageItem.id})" class="flex-1 py-2.5 bg-[#28A745] text-white rounded-lg text-xs font-bold hover:bg-[#208739] transition-all">
                 Publish
             </button>
-            <button onclick="removeReviewCard(${imageItem.id})" class="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-200 transition-all">
+            <button onclick="window.removeReviewCard(${imageItem.id})" class="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-200 transition-all">
                 Discard
             </button>
         </div>
@@ -340,37 +302,45 @@ function removeReviewCard(imageId) {
     }
 }
 
+// Live Database Publishing
 async function publishProduct(imageId) {
-    // Get the review card
     const card = document.getElementById(`review-${imageId}`);
     if (!card) return;
     
-    // Get values from inputs
     const inputs = card.querySelectorAll('input, textarea');
-    const productData = {
-        name: inputs[0].value,
+    const imgEl = card.querySelector('img');
+    
+    const productPayload = {
+        id: crypto.randomUUID(),
+        business_id: localStorage.getItem('current_business_id') || window.currentBusinessId,
+        title: inputs[0].value,
         description: inputs[1].value,
-        category: inputs[2].value,
-        price: parseFloat(inputs[3].value),
-        business_id: window.currentBusinessId
+        product_type: inputs[2].value, // Category maps to product_type text field
+        price: parseFloat(inputs[3].value) || 0,
+        img: imgEl ? imgEl.src : '',
+        status: 'manual'
     };
     
-    if (!productData.name.trim()) {
+    if (!productPayload.title.trim()) {
         showNotification('Product name is required', 'error');
         return;
     }
     
-    // Publish to database (via supabaseAPI)
     try {
-        const result = await supabaseAPI.db.insertData('products', productData);
+        const result = await productService.addProduct(productPayload);
         
         if (!result.success) {
-            showNotification(`Error publishing: ${result.error.message}`, 'error');
+            showNotification(`Error publishing: ${result.error}`, 'error');
             return;
         }
         
         showNotification('Product published successfully!', 'success');
         removeReviewCard(imageId);
+        
+        // Signal products list view to reload next time it renders
+        if (typeof window.isInitialized !== 'undefined') {
+            window.isInitialized = false;
+        }
     } catch (error) {
         showNotification(`Error: ${error.message}`, 'error');
     }
@@ -382,16 +352,18 @@ async function publishProduct(imageId) {
 
 function updateReviewCount() {
     const reviewContainer = document.getElementById('aiReviewContainer');
+    if (!reviewContainer) return;
     const count = reviewContainer.querySelectorAll('.review-card-dashboard').length;
-    document.getElementById('aiReviewCount').textContent = count;
+    const countEl = document.getElementById('aiReviewCount');
+    if (countEl) countEl.textContent = count;
 }
 
 function updateProcessBtn() {
     const btn = document.getElementById('aiProcessBtn');
-    btn.disabled = window.imageQueue.length === 0 || window.processingInProgress;
+    if (btn) {
+        btn.disabled = window.imageQueue.length === 0 || window.processingInProgress;
+    }
 }
-
-
 
 // ==========================================
 // UTILITY FUNCTIONS
@@ -406,7 +378,6 @@ function formatFileSize(bytes) {
 }
 
 function showNotification(message, type = 'info') {
-    // Create a simple notification (you can enhance this)
     const notification = document.createElement('div');
     notification.className = `fixed bottom-4 right-4 px-6 py-3 rounded-xl text-sm font-bold shadow-lg text-white z-[200] transition-all animate-fade-in-up ${
         type === 'success' ? 'bg-[#28A745]' :
@@ -423,7 +394,12 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-// Add fade-in animation style
+// Globals injection for inline HTML layout listeners
+window.removeFromQueue = removeFromQueue;
+window.startAiProcessing = startAiProcessing;
+window.removeReviewCard = removeReviewCard;
+window.publishProduct = publishProduct;
+
 const style = document.createElement('style');
 style.textContent = `
     @keyframes fade-in-up {

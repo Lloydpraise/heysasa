@@ -1,5 +1,5 @@
 // ─── Analytics data ───────────────────────────────────────────────────────────
-const analyticsData = {
+let analyticsData = {
     funnel: [
         { stage: 'Total contacts',    count: 6  },
         { stage: 'Business leads',    count: 5  },
@@ -503,9 +503,20 @@ function buildSection() {
 }
 
 // ─── Main render ──────────────────────────────────────────────────────────────
-function renderAnalyticsContent() {
+async function renderAnalyticsContent() {
     injectAnalyticsStyles();
     const contentArea = document.getElementById('content-area');
+
+    // Pull active context token and fetch real database rows before printing charts
+    const businessId = window.getActiveBusinessId();
+    if (businessId && window.analyticsService) {
+        const liveData = await window.analyticsService.getDashboardMetrics(businessId);
+        if (liveData) {
+            analyticsData = liveData;
+            console.log("[Analytics UI] Live database summaries mounted successfully.");
+        }
+    }
+
     contentArea.classList.remove('items-center','justify-center','p-4','overflow-y-auto');
     contentArea.classList.add('overflow-hidden');
     contentArea.style.padding = '0';

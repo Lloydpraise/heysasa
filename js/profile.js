@@ -9,11 +9,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const profileMenu = document.getElementById('profile-menu');
 
     /**
-     * 1. Load & Display User Data
-     * Note: Redirect is commented out for design purposes.
+     * 1. Load & Display User Data from Live Supabase Auth
      */
     async function loadUserProfile() {
-        const sb = window.getSupabase();
+        // Fallback check for both common initialization methods
+        const sb = window.getSupabase ? window.getSupabase() : window.supabase;
         
         if (!sb) {
             displayDefaultUser();
@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
+            // Fallback to Lloyd Praise if no metadata name is configured yet
             const fullName = user.user_metadata?.full_name || "Lloyd Praise";
             updateProfileUI(fullName, user.email);
 
@@ -77,7 +78,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 /**
- * 3. Change Password Logic (Mocked for Design)
+ * 3. Change Password Logic (Connected to Supabase Auth)
  */
 function openPasswordModal() {
     const modal = document.getElementById('password-modal');
@@ -106,29 +107,51 @@ async function submitPasswordChange() {
         return;
     }
 
-    // Mock Success UI flow
-    closePasswordModal();
-
-    const toast = document.getElementById('success-toast');
-    if (toast) {
-        toast.classList.remove('translate-y-20', 'opacity-0');
-        
-        setTimeout(() => {
-            toast.classList.add('translate-y-20', 'opacity-0');
-        }, 3000);
+    const sb = window.getSupabase ? window.getSupabase() : window.supabase;
+    if (!sb) {
+        alert("Database client connection error. Please refresh the page.");
+        return;
     }
 
-    document.getElementById('old-password').value = "";
-    document.getElementById('new-password').value = "";
+    try {
+        // Send live password update request to Supabase Auth
+        const { error } = await sb.auth.updateUser({ password: newPass });
+        
+        if (error) throw error;
+
+        // Success UI flow
+        closePasswordModal();
+
+        const toast = document.getElementById('success-toast');
+        if (toast) {
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // Clear values safely
+        document.getElementById('old-password').value = "";
+        document.getElementById('new-password').value = "";
+
+    } catch (err) {
+        alert("Failed to update password: " + err.message);
+    }
 }
 
 /**
- * 4. Logout Logic
+ * 4. Logout Logic (Signs out session and breaks cache)
  */
 async function handleLogout() {
-    const sb = window.getSupabase();
+    const sb = window.getSupabase ? window.getSupabase() : window.supabase;
     if (sb) {
-        await sb.auth.signOut();
+        try {
+            await sb.auth.signOut();
+        } catch (err) {
+            console.error("Logout session error:", err.message);
+        }
     }
+    // Wipe local cache targets if applicable and redirect back to login gate
     window.location.href = 'login.html';
 }
