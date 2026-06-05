@@ -63,245 +63,8 @@ const ICON = {
   spark:    `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 2l2 6h6l-5 3.6 1.9 6L10 14l-4.9 3.6L7 11.6 2 8h6z" stroke-linejoin="round"/></svg>`,
 };
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-let mockLeads = [
-  {
-    id: 1,
-    name: "Sarah Wambui",
-    phone: "+254 712 345 678",
-    lead_state: "engaged",
-    lead_type: "business",
-    is_ad_lead: true,
-    ad_headline: "Power Your Home 24/7 — Solar Backup Systems",
-    ad_body: "Never lose power again. Our 5kW solar inverter + lithium battery keeps you running day and night. Installation in 4 hours.",
-    ad_thumbnail_url: "https://placehold.co/60x60/1a1a1a/ffffff?text=AD",
-    ad_platform: "facebook",
-    original_ad_id: "fb_ad_001",
-    product_interests: ["solar_energy"],
-    lead_quality: "hot",
-    conv_stage: "Price Inquiry",
-    customer_intent: "Needs home office backup; worried about installation time.",
-    next_action_plan: "Send the 'Fast-Track Installation' offer and technician schedule.",
-    psychology: "Values reliability over cost. Needs reassurance on warranty.",
-    trust_markers: ["KRA Verified", "Till Number Displayed"],
-    vibe_check: "Polite but urgent; highly focused on technical specs and timelines.",
-    context_summary: "5kW system for home office. Blocker: installation time. Has budget.",
-    follow_up_count: 2,
-    last_seen: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-    unread_count: 2,
-    cart_state: ["Solar Inverter 5kW", "Lithium Battery 200Ah"],
-    is_business_chat: true,
-    followup: {
-      status: 'opted_in',
-      current_step: 2,
-      pending_approval: true,
-      draft: "Sarah, wanted to share something real — James from Lavington installed our 5kW system last month. He works from home just like you and told us it was the best investment he'd made all year. Want me to send you his full story?",
-      sent_steps: [1],
-      next_due: new Date(Date.now() + 1 * 60 * 60 * 1000).toISOString(),
-      sequence_started: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
-    },
-    transcript: [
-      { sender: "Sarah", msg: "Hi, how much is the 5kW system?", time: "10:14 AM" },
-      { sender: "AI", msg: "Hi Sarah! Our 5kW system starts at KES 150,000 including the lithium battery. It's our most popular setup for home offices. Would you like to see our installation packages?", time: "10:14 AM" },
-      { sender: "Sarah", msg: "Yes, but how long does it take to install? I work from home and can't afford downtime.", time: "10:17 AM" },
-      { sender: "AI", msg: "Totally understand — we actually offer fast-track installations that are done in under 4 hours, usually morning to afternoon. Your internet and office stay running throughout. Want me to check available slots this week?", time: "10:17 AM" },
-      { sender: "Sarah", msg: "That sounds great. What warranty do you offer?", time: "10:21 AM" },
-      { sender: "User", msg: "Hi Sarah, this is James from the team. We offer a 5-year full warranty on the inverter and 3 years on the battery — one of the best in the market. I can also send you a quotation right now if you'd like to confirm the slot.", time: "10:25 AM" }
-    ]
-  },
-  {
-    id: 2,
-    name: "Brian Omondi",
-    phone: "+254 722 987 654",
-    lead_state: "stalled",
-    lead_type: "business",
-    is_ad_lead: true,
-    ad_headline: "Power Your Home 24/7 — Solar Backup Systems",
-    ad_body: "Never lose power again. Our 5kW solar inverter + lithium battery keeps you running day and night. Installation in 4 hours.",
-    ad_thumbnail_url: "https://placehold.co/60x60/1a1a1a/ffffff?text=AD",
-    ad_platform: "facebook",
-    original_ad_id: "fb_ad_001",
-    product_interests: ["solar_energy"],
-    lead_quality: "warm",
-    conv_stage: "Comparing Options",
-    customer_intent: "Comparing solar vs generator. Price sensitive.",
-    next_action_plan: "Send cost comparison: solar 5yr TCO vs generator 5yr TCO.",
-    psychology: "Analytical. Will decide on numbers, not emotion.",
-    trust_markers: ["Till Number Displayed"],
-    vibe_check: "Methodical. Asks the right questions. Stalled because he's doing research.",
-    context_summary: "Evaluating solar vs generator. Needs data-driven nudge.",
-    follow_up_count: 1,
-    last_seen: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    unread_count: 0,
-    cart_state: ["Solar Inverter 3kW"],
-    is_business_chat: true,
-    followup: {
-      status: 'opted_in',
-      current_step: 1,
-      pending_approval: false,
-      draft: null,
-      sent_steps: [],
-      next_due: new Date(Date.now() + 18 * 60 * 60 * 1000).toISOString(),
-      sequence_started: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
-    },
-    transcript: [
-      { sender: "Brian", msg: "How does your solar compare to just getting a generator?", time: "Yesterday" },
-      { sender: "AI", msg: "Great question Brian. Over 5 years, solar typically costs 60% less to run than a petrol generator — no fuel costs, near-zero maintenance. Want me to put together the numbers for your specific load?", time: "Yesterday" },
-      { sender: "Brian", msg: "Yes please. I'll think about it.", time: "Yesterday" }
-    ]
-  },
-  {
-    id: 3,
-    name: "Amina Hassan",
-    phone: "+254 733 112 233",
-    lead_state: "new",
-    lead_type: "business",
-    is_ad_lead: true,
-    ad_headline: "Rent Furnished Apartments in Westlands",
-    ad_body: "1, 2 & 3 bedroom fully furnished apartments. Monthly rates from KES 45,000. All utilities included.",
-    ad_thumbnail_url: "https://placehold.co/60x60/1a1a1a/ffffff?text=AD",
-    ad_platform: "instagram",
-    original_ad_id: "ig_ad_002",
-    product_interests: ["real_estate"],
-    lead_quality: "hot",
-    conv_stage: "First Contact",
-    customer_intent: "Looking for 2BR apartment, move-in next month.",
-    next_action_plan: "Send 2BR unit photos and available dates. Offer viewing this week.",
-    psychology: "Ready to decide. Time-sensitive — relocation context.",
-    trust_markers: [],
-    vibe_check: "Decisive and clear on requirements. High buying intent.",
-    context_summary: "Relocating to Nairobi. Needs 2BR furnished, Westlands. Budget TBD.",
-    follow_up_count: 0,
-    last_seen: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-    unread_count: 1,
-    cart_state: ["2BR Furnished — Westlands"],
-    is_business_chat: true,
-    followup: {
-      status: 'not_enrolled',
-      current_step: 0,
-      pending_approval: false,
-      draft: null,
-      sent_steps: [],
-      next_due: null,
-      sequence_started: null
-    },
-    transcript: [
-      { sender: "Amina", msg: "Hi I saw your ad. Do you have 2 bedroom units available from next month?", time: "45 min ago" },
-      { sender: "AI", msg: "Hi Amina! Yes, we have two 2BR units available from the 1st. Both are fully furnished with wifi, water and security included. Can I send you photos and the monthly rate?", time: "45 min ago" },
-      { sender: "Amina", msg: "Yes please!", time: "43 min ago" }
-    ]
-  },
-  {
-    id: 4,
-    name: "Kevin Mwangi",
-    phone: "+254 700 445 566",
-    lead_state: "ghosted",
-    lead_type: "business",
-    is_ad_lead: false,
-    ad_headline: null, ad_body: null, ad_thumbnail_url: null, ad_platform: null, original_ad_id: null,
-    product_interests: ["solar_energy", "financial_services"],
-    lead_quality: "warm",
-    conv_stage: "Ghosted After Quote",
-    customer_intent: "Was interested in solar, went quiet after receiving quote.",
-    next_action_plan: "Send a no-pressure check-in. Offer flexible payment plan.",
-    psychology: "May have had budget shock. Needs softer re-entry.",
-    trust_markers: ["KRA Verified"],
-    vibe_check: "Was warm, then disappeared. Likely comparing prices elsewhere.",
-    context_summary: "Received quote for 5kW. No response in 8 days. Price-conscious.",
-    follow_up_count: 3,
-    last_seen: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-    unread_count: 0,
-    cart_state: ["Solar Inverter 5kW"],
-    is_business_chat: true,
-    followup: {
-      status: 'opted_in',
-      current_step: 3,
-      pending_approval: true,
-      draft: "Kevin, quick one — we've been helping a few people with the same budget concern. We now have a 12-month payment plan where you start at KES 14,500/month. No hidden fees. Wanted you to hear about it before slots fill up this week.",
-      sent_steps: [1, 2],
-      next_due: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      sequence_started: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString()
-    },
-    transcript: [
-      { sender: "Kevin", msg: "Can I get a quote for the 5kW system?", time: "8 days ago" },
-      { sender: "AI", msg: "Of course Kevin! Here's your quote: 5kW Inverter + 200Ah Battery + Installation = KES 165,000. We also have a 12-month payment plan starting at KES 14,500/month.", time: "8 days ago" },
-      { sender: "Kevin", msg: "Ok let me think about it", time: "8 days ago" }
-    ]
-  },
-  {
-    id: 5,
-    name: "Grace Njoroge",
-    phone: "+254 711 334 455",
-    lead_state: "won",
-    lead_type: "business",
-    is_ad_lead: true,
-    ad_headline: "Power Your Home 24/7 — Solar Backup Systems",
-    ad_body: "Never lose power again. Our 5kW solar inverter + lithium battery keeps you running day and night.",
-    ad_thumbnail_url: "https://placehold.co/60x60/1a1a1a/ffffff?text=AD",
-    ad_platform: "facebook",
-    original_ad_id: "fb_ad_001",
-    product_interests: ["solar_energy"],
-    lead_quality: "hot",
-    conv_stage: "Closed",
-    customer_intent: "Purchased 5kW system. Installation scheduled.",
-    next_action_plan: "Send post-installation care guide and ask for referral.",
-    psychology: "Happy customer. Good referral potential.",
-    trust_markers: ["KRA Verified", "Till Number Displayed"],
-    vibe_check: "Very satisfied. Mentioned friends asking about solar.",
-    context_summary: "Converted. Paid in full. Installation done. Very happy.",
-    follow_up_count: 1,
-    last_seen: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    unread_count: 0,
-    cart_state: ["Solar Inverter 5kW", "Lithium Battery 200Ah"],
-    is_business_chat: true,
-    followup: {
-      status: 'completed',
-      current_step: 11,
-      pending_approval: false,
-      draft: null,
-      sent_steps: [1, 2, 3, 4, 5],
-      next_due: null,
-      sequence_started: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
-    },
-    transcript: [
-      { sender: "Grace", msg: "Hi, interested in the solar system from your ad", time: "4 days ago" },
-      { sender: "AI", msg: "Hi Grace! Great to hear from you. Which system size are you looking at?", time: "4 days ago" },
-      { sender: "Grace", msg: "The 5kW one. How fast can you install?", time: "4 days ago" },
-      { sender: "User", msg: "Hi Grace, we can do tomorrow morning. Payment is via M-Pesa till number 123456. Want to confirm?", time: "4 days ago" },
-      { sender: "Grace", msg: "Confirmed! Payment sent.", time: "4 days ago" }
-    ]
-  },
-  {
-    id: 6,
-    name: "Daniel Otieno",
-    phone: "+254 799 223 344",
-    lead_state: "new",
-    lead_type: "personal",
-    is_ad_lead: false,
-    ad_headline: null, ad_body: null, ad_thumbnail_url: null, ad_platform: null, original_ad_id: null,
-    product_interests: [],
-    lead_quality: null,
-    conv_stage: "Personal",
-    customer_intent: "Appears to be a personal contact, not a business lead.",
-    next_action_plan: null,
-    psychology: null,
-    trust_markers: [],
-    vibe_check: "Casual greeting. No product interest detected.",
-    context_summary: "Personal contact. Greeted casually. No buying intent.",
-    follow_up_count: 0,
-    last_seen: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    unread_count: 0,
-    cart_state: [],
-    is_business_chat: false,
-    followup: { status: 'not_enrolled', current_step: 0, pending_approval: false, draft: null, sent_steps: [], next_due: null },
-    transcript: [
-      { sender: "Daniel", msg: "Niaje bro, uko?", time: "5 days ago" },
-      { sender: "User", msg: "Poa! Uko sawa?", time: "5 days ago" }
-    ]
-  }
-];
-
 // ─── State ────────────────────────────────────────────────────────────────────
+let leadsData = [];
 let leadsSearchQuery        = '';
 let activeLeadStateFilter   = 'all';
 let activeLeadTypeFilter    = 'all';
@@ -311,20 +74,20 @@ let editingFollowupId       = null;
 
 // ─── Computed stats ───────────────────────────────────────────────────────────
 function getLeadStats() {
-  const business = mockLeads.filter(l => l.lead_type === 'business');
-  const adLeads  = mockLeads.filter(l => l.is_ad_lead);
-  const unread   = mockLeads.filter(l => l.unread_count > 0);
-  const urgent   = mockLeads.filter(l => ['stalled','ghosted'].includes(l.lead_state) && l.lead_type === 'business');
-  const ready    = mockLeads.filter(l => l.lead_quality === 'hot' && l.lead_state === 'engaged');
-  const pending  = mockLeads.filter(l => l.followup?.pending_approval);
-  return { total: mockLeads.length, business: business.length, adLeads: adLeads.length, unread: unread.length, urgent: urgent.length, ready: ready.length, pending: pending.length };
+  const business = leadsData.filter(l => l.lead_type === 'business');
+  const adLeads  = leadsData.filter(l => l.is_ad_lead);
+  const unread   = leadsData.filter(l => l.unread_count > 0);
+  const urgent   = leadsData.filter(l => ['stalled','ghosted'].includes(l.lead_state) && l.lead_type === 'business');
+  const ready    = leadsData.filter(l => l.lead_quality === 'hot' && l.lead_state === 'engaged');
+  const pending  = leadsData.filter(l => l.followup?.pending_approval);
+  return { total: leadsData.length, business: business.length, adLeads: adLeads.length, unread: unread.length, urgent: urgent.length, ready: ready.length, pending: pending.length };
 }
 
 // ─── Filter + sort ────────────────────────────────────────────────────────────
 const STATE_PRIORITY = { engaged: 0, new: 1, warm: 2, stalled: 3, ghosted: 4, won: 5, lost: 6, personal: 7 };
 
 function getFilteredLeads() {
-  return mockLeads
+  return leadsData
     .filter(lead => {
       const q = leadsSearchQuery.toLowerCase();
       const matchesSearch = !q ||
@@ -1922,7 +1685,7 @@ function renderDetailPanel(lead) {
 
 // ─── Profile Drawer ───────────────────────────────────────────────────────────
 function openProfileDrawer(leadId) {
-  const lead = mockLeads.find(l => l.id === leadId);
+  const lead = leadsData.find(l => l.id === leadId);
   if (!lead) return;
   const waUrl = `https://wa.me/${lead.phone.replace(/\D/g,'')}`;
   const rows = [
@@ -1986,7 +1749,7 @@ function openProfileDrawer(leadId) {
 
 // ─── Follow-ups Drawer ────────────────────────────────────────────────────────
 function openFollowupsDrawer(leadId) {
-  const lead = mockLeads.find(l => l.id === leadId || l.id === Number(leadId));
+  const lead = leadsData.find(l => l.id === leadId || l.id === Number(leadId));
   if (!lead) return;
   openDrawer('followups-drawer', 'Follow-up Sequence', renderFollowupsDrawerContent(lead));
 }
@@ -2002,7 +1765,7 @@ function renderFollowupsDrawerContent(lead) {
 
 // ─── Chat Drawer ──────────────────────────────────────────────────────────────
 function openChatDrawer(leadId) {
-  const lead = mockLeads.find(l => l.id === leadId || l.id === Number(leadId));
+  const lead = leadsData.find(l => l.id === leadId || l.id === Number(leadId));
   if (!lead) return;
   const waUrl = `https://wa.me/${lead.phone.replace(/\D/g,'')}`;
 
@@ -2055,7 +1818,7 @@ function openChatDrawer(leadId) {
 
 // ─── Approval Drawer ──────────────────────────────────────────────────────────
 function openApprovalDrawer() {
-  const pending = mockLeads.filter(l => l.followup?.pending_approval);
+  const pending = leadsData.filter(l => l.followup?.pending_approval);
   const content = pending.length === 0 ? `
     <div class="lv3-empty" style="height:200px">
       ${ic('check',36)}
@@ -2165,7 +1928,7 @@ let activeBoughtLeadId = null;
 
 function openBoughtModal(leadId) {
   activeBoughtLeadId = Number(leadId) || leadId;
-  const lead = mockLeads.find(l => l.id === activeBoughtLeadId || l.id === Number(leadId));
+  const lead = leadsData.find(l => l.id === activeBoughtLeadId || l.id === Number(leadId));
 
   let modal = document.getElementById('lv3-modal');
   if (!modal) {
@@ -2208,7 +1971,7 @@ function closeBoughtModal() {
 }
 
 function confirmPurchase() {
-  const lead = mockLeads.find(l => l.id === activeBoughtLeadId);
+  const lead = leadsData.find(l => l.id === activeBoughtLeadId);
   if (lead) {
     lead.lead_state = 'won';
     lead.conv_stage = 'Closed';
@@ -2225,7 +1988,7 @@ function confirmPurchase() {
 
 // ─── Follow-up actions ────────────────────────────────────────────────────────
 function approveDraft(leadId) {
-  const lead = mockLeads.find(l => l.id === leadId || l.id === Number(leadId));
+  const lead = leadsData.find(l => l.id === leadId || l.id === Number(leadId));
   if (!lead?.followup) return;
   lead.followup.pending_approval = false;
   lead.followup.sent_steps       = [...(lead.followup.sent_steps||[]), lead.followup.current_step];
@@ -2238,7 +2001,7 @@ function approveDraft(leadId) {
 }
 
 function skipDraft(leadId) {
-  const lead = mockLeads.find(l => l.id === leadId || l.id === Number(leadId));
+  const lead = leadsData.find(l => l.id === leadId || l.id === Number(leadId));
   if (!lead?.followup) return;
   lead.followup.pending_approval = false;
   lead.followup.draft            = null;
@@ -2257,7 +2020,7 @@ function editDraft(leadId) {
 
 function saveEditedDraft(leadId) {
   const ta   = document.getElementById(`fu-ei-${leadId}`);
-  const lead = mockLeads.find(l => l.id === leadId || l.id === Number(leadId));
+  const lead = leadsData.find(l => l.id === leadId || l.id === Number(leadId));
   if (!ta || !lead?.followup) return;
   lead.followup.draft = ta.value;
   approveDraft(leadId);
@@ -2274,7 +2037,7 @@ function rewriteDraft(leadId) {
 
 function submitRewrite(leadId) {
   const inp  = document.getElementById(`fu-ri-${leadId}`);
-  const lead = mockLeads.find(l => l.id === leadId || l.id === Number(leadId));
+  const lead = leadsData.find(l => l.id === leadId || l.id === Number(leadId));
   if (!inp || !lead?.followup) return;
   const instruction = inp.value || 'make it shorter';
   lead.followup.draft = `[Rewritten: "${instruction}"] ${lead.followup.draft?.slice(0, 80)}…`;
@@ -2288,7 +2051,7 @@ function cancelEdit(leadId) {
 }
 
 function sendConsentMessage(leadId) {
-  const lead = mockLeads.find(l => l.id === leadId || l.id === Number(leadId));
+  const lead = leadsData.find(l => l.id === leadId || l.id === Number(leadId));
   if (!lead?.followup) return;
   lead.followup.status       = 'consent_sent';
   lead.followup.current_step = 1;
@@ -2302,7 +2065,7 @@ function toggleSequence(leadId) {
   // Refresh follow-ups drawer if open
   const fuDrawer = document.getElementById('followups-drawer');
   if (fuDrawer?.classList.contains('open')) {
-    const lead = mockLeads.find(l => l.id === leadId || l.id === Number(leadId));
+    const lead = leadsData.find(l => l.id === leadId || l.id === Number(leadId));
     if (lead) {
       const body = document.getElementById('followups-drawer-body');
       if (body) body.innerHTML = renderFollowupsDrawerContent(lead);
@@ -2334,7 +2097,7 @@ function setTypeFilter(t)     { activeLeadTypeFilter  = t; rerenderList(); }
 function handleLeadsSearch(q) { leadsSearchQuery = q;       rerenderList(); }
 
 async function openLeadDetail(id) {
-  const lead = mockLeads.find(l => l.id === id);
+  const lead = leadsData.find(l => l.id === id);
   if (!lead) return;
 
   activeLeadId = id;
@@ -2376,25 +2139,25 @@ function rerenderList() {
 }
 
 function rerenderAll() {
-  const lead     = mockLeads.find(l => l.id === activeLeadId) || null;
+  const lead     = leadsData.find(l => l.id === activeLeadId) || null;
   const detailEl = document.getElementById('lv3-detail-inner');
   if (detailEl) detailEl.innerHTML = renderDetailPanel(lead);
   rerenderList();
 }
 
 // ─── Main render ──────────────────────────────────────────────────────────────
-async function renderLeadsContent() {
+async function renderLeadsContent(businessId) {
   injectLeadsStyles();
 
   const contentArea = document.getElementById('content-area');
   if (!contentArea) return;
 
   // Fetch active business context and load live data from database
-  const businessId = window.getActiveBusinessId();
-  if (businessId && window.leadsService) {
-      const liveLeads = await window.leadsService.fetchLiveLeads(businessId);
+  const activeId = businessId || window.getActiveBusinessId();
+  if (activeId && window.leadsService) {
+      const liveLeads = await window.leadsService.fetchLiveLeads(activeId);
       if (liveLeads) {
-          mockLeads = liveLeads;
+          leadsData = liveLeads || [];
           console.log("[Leads UI] Live data records mounted successfully.");
       }
   }
@@ -2405,7 +2168,14 @@ if (typeof PAGE_CONFIG !== 'undefined') {
     title:       'Leads',
     description: 'Manage and track all your leads.',
     navId:       'nav-leads',
-    render:      renderLeadsContent
+    render: function(passedBusinessId) {
+      const activeId = passedBusinessId || localStorage.getItem('business_id');
+      if (activeId) {
+        renderLeadsContent(activeId);
+      } else {
+        console.error('[Leads Error] No business ID available.');
+      }
+    }
   };
 }
 
@@ -2475,11 +2245,14 @@ function openAddLeadModal() {
   alert('Add Lead — connect to your lead creation flow.');
 }
 
+// Expose rendering function globally so navigation.js can see it
+window.renderLeadsContent = renderLeadsContent;
+
 // ─── Home section hooks ───────────────────────────────────────────────────────
 window.heysasaLeads = {
-  getPendingCount:   () => mockLeads.filter(l => l.followup?.pending_approval).length,
-  getHotLeads:       () => mockLeads.filter(l => l.lead_quality === 'hot' && l.lead_state === 'engaged'),
-  getUnreadCount:    () => mockLeads.filter(l => l.unread_count > 0).length,
+  getPendingCount:   () => leadsData.filter(l => l.followup?.pending_approval).length,
+  getHotLeads:       () => leadsData.filter(l => l.lead_quality === 'hot' && l.lead_state === 'engaged'),
+  getUnreadCount:    () => leadsData.filter(l => l.unread_count > 0).length,
   openApprovalInbox: openApprovalDrawer,
   openLead:          (id) => { if (typeof renderLeadsContent === 'function') { renderLeadsContent(); setTimeout(() => openLeadDetail(id), 100); } }
 };

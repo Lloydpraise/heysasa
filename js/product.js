@@ -1,22 +1,17 @@
-// Live Data State
-let products = [];
+// ─── Live Data State ──────────────────────────────────────────────────────────
+let products      = [];
 let isInitialized = false;
-let isLoading = false;
+let isLoading     = false;
 
-let currentTab = 'added'; // 'added' or 'discovered'
-let currentView = 'image'; // 'image' or 'list'
-let searchQuery = ''; // Search state
-let imageObserver = null; // Intersection Observer for lazy loading images
-let cardObserver = null; // Intersection Observer for scroll animations
+let currentTab  = 'added';  // 'added' | 'discovered'
+let currentView = 'image';  // 'image' | 'list'
+let searchQuery = '';
 
-// Initialize Intersection Observer for lazy loading images
+let imageObserver = null;
+let cardObserver  = null;
+
+// ─── Intersection Observer: lazy image loading ────────────────────────────────
 function initLazyLoadingObserver() {
-    const observerOptions = {
-        root: null,
-        rootMargin: '50px',
-        threshold: 0.01
-    };
-
     imageObserver = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
@@ -29,17 +24,11 @@ function initLazyLoadingObserver() {
                 }
             }
         });
-    }, observerOptions);
+    }, { root: null, rootMargin: '50px', threshold: 0.01 });
 }
 
-// Initialize Intersection Observer for staggered card scroll animations
+// ─── Intersection Observer: staggered card scroll animations ─────────────────
 function initCardAnimationObserver() {
-    const observerOptions = {
-        root: null,
-        rootMargin: '0px 0px -40px 0px',
-        threshold: 0.1
-    };
-
     cardObserver = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
@@ -47,51 +36,70 @@ function initCardAnimationObserver() {
                 cardObserver.unobserve(entry.target);
             }
         });
-    }, observerOptions);
+    }, { root: null, rootMargin: '0px 0px -40px 0px', threshold: 0.1 });
 }
 
 function applyLazyLoading() {
     if (!imageObserver) initLazyLoadingObserver();
-    const lazyImages = document.querySelectorAll('img[data-src]');
-    lazyImages.forEach(img => {
-        imageObserver.observe(img);
-    });
+    document.querySelectorAll('img[data-src]').forEach(img => imageObserver.observe(img));
 }
 
 function applyCardAnimations() {
     if (!cardObserver) initCardAnimationObserver();
-    const cards = document.querySelectorAll('.animate-card');
-    cards.forEach(card => {
-        cardObserver.observe(card);
-    });
+    document.querySelectorAll('.animate-card').forEach(card => cardObserver.observe(card));
 }
 
-// Main execution function
-async function renderProductsPage() {
+// ─── Main render ──────────────────────────────────────────────────────────────
+async function renderProductsPage(businessId) {
     const container = document.getElementById('content-area');
     container.classList.remove('items-center', 'justify-center');
     container.classList.add('flex-col', 'overflow-y-auto');
 
-    // Get current business ID from your app session/localStorage
-    const businessId = localStorage.getItem('current_business_id') || 'default';
+    const activeId = businessId || window.getActiveBusinessId?.();
 
-    // Live Database Fetching (Runs only once on page entry, avoids db spam on search keystrokes)
+    // ── Fetch from DB once per page session (not on every search/tab toggle) ──
     if (!isInitialized && !isLoading) {
         isLoading = true;
+
         container.innerHTML = `
             <div class="flex items-center justify-center py-20 text-gray-400 font-medium text-sm">
-                <svg class="animate-spin h-5 w-5 mr-3 text-green-600" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                <svg class="animate-spin h-5 w-5 mr-3 text-green-600" viewBox="0 0 24 24" fill="none">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
                 Loading product catalog...
             </div>`;
-        
-        const response = await productService.fetchProducts(businessId);
-        if (response.success) {
-            products = response.data;
-            isInitialized = true;
+
+        if (!window.productService) {
+            console.error('[Products] productService not found. Ensure product-service.js is loaded.');
+            container.innerHTML = `
+                <div class="flex items-center justify-center py-20 text-red-400 text-sm font-medium">
+                    Product service unavailable. Check console for details.
+                </div>`;
+            isLoading = false;
+            return;
         }
+
+        const response = await window.productService.fetchProducts(activeId);
+        if (response.success) {
+            products      = response.data;
+            isInitialized = true;
+        } else {
+            container.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-20 gap-4 text-center">
+                    <div class="text-3xl">⚠️</div>
+                    <div class="text-sm font-bold text-gray-700">Failed to load products</div>
+                    <div class="text-xs text-gray-400 max-w-xs">${response.error || 'Unknown error'}</div>
+                    <button onclick="renderProductsPage()" class="px-4 py-2 bg-green-600 text-white text-xs font-bold rounded-xl mt-2">Retry</button>
+                </div>`;
+            isLoading = false;
+            return;
+        }
+
         isLoading = false;
     }
 
+    // ── Inject scroll-animation styles once ───────────────────────────────────
     if (!document.getElementById('staggered-scroll-styles')) {
         const style = document.createElement('style');
         style.id = 'staggered-scroll-styles';
@@ -105,7 +113,7 @@ async function renderProductsPage() {
         `;
         document.head.appendChild(style);
     }
-    
+
     container.innerHTML = `
         <div class="flex flex-col gap-6 w-full max-w-full overflow-x-hidden p-1">
             <div class="flex flex-wrap items-center justify-between gap-4">
@@ -113,9 +121,9 @@ async function renderProductsPage() {
                     <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </span>
-                    <input 
-                        type="text" 
-                        placeholder="Search by title or description..." 
+                    <input
+                        type="text"
+                        placeholder="Search by title or description..."
                         value="${searchQuery}"
                         oninput="window.handleSearch(this.value)"
                         class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 transition-all"
@@ -123,13 +131,13 @@ async function renderProductsPage() {
                 </div>
 
                 <div class="flex bg-gray-100 p-1 rounded-2xl w-fit shrink-0">
-                    <button onclick="window.switchTab('added')" class="px-4 sm:px-6 py-2 rounded-xl text-xs font-bold transition-all ${currentTab === 'added' ? 'bg-white shadow-sm text-green-600' : 'text-gray-400'}">Added Products</button>
+                    <button onclick="window.switchTab('added')"      class="px-4 sm:px-6 py-2 rounded-xl text-xs font-bold transition-all ${currentTab === 'added'      ? 'bg-white shadow-sm text-green-600' : 'text-gray-400'}">Added Products</button>
                     <button onclick="window.switchTab('discovered')" class="px-4 sm:px-6 py-2 rounded-xl text-xs font-bold transition-all ${currentTab === 'discovered' ? 'bg-white shadow-sm text-green-600' : 'text-gray-400'}">Discovered</button>
                 </div>
 
                 <div class="flex items-center gap-3 flex-wrap">
                     <div class="flex bg-white border border-gray-100 rounded-xl overflow-hidden">
-                        <button onclick="window.switchView('list')" class="p-2 ${currentView === 'list' ? 'bg-gray-50 text-green-600' : 'text-gray-400'}">
+                        <button onclick="window.switchView('list')" class="p-2 ${currentView === 'list'  ? 'bg-gray-50 text-green-600' : 'text-gray-400'}">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                         </button>
                         <button onclick="window.switchView('image')" class="p-2 ${currentView === 'image' ? 'bg-gray-50 text-green-600' : 'text-gray-400'}">
@@ -148,16 +156,24 @@ async function renderProductsPage() {
             </div>
         </div>
     `;
-    
+
     requestAnimationFrame(() => {
         applyLazyLoading();
         applyCardAnimations();
     });
 }
 
+// ─── Search & Tab/View toggles (re-render UI only, no DB call) ────────────────
 function handleSearch(query) {
     searchQuery = query.toLowerCase();
-    renderProductsPage();
+    const gridContainer = document.getElementById('products-grid-container');
+    if (gridContainer) {
+        gridContainer.innerHTML = currentView === 'image' ? renderImageView() : renderListView();
+        requestAnimationFrame(() => {
+            applyLazyLoading();
+            applyCardAnimations();
+        });
+    }
 }
 
 function switchTab(tab) {
@@ -170,40 +186,77 @@ function switchView(view) {
     renderProductsPage();
 }
 
-// Handle Database Row Deletion
+// ─── Delete ───────────────────────────────────────────────────────────────────
 async function handleDeleteProduct(productId) {
-    if (!confirm("Are you sure you want to permanently delete this product?")) return;
+    if (!confirm('Are you sure you want to permanently delete this product?')) return;
 
-    const response = await productService.deleteProduct(productId);
+    const response = await window.productService.deleteProduct(productId);
     if (response.success) {
         products = products.filter(p => p.id !== productId);
         renderProductsPage();
     } else {
-        alert("Error deleting product: " + response.error);
+        alert('Error deleting product: ' + response.error);
     }
 }
 
+// ─── Filter helper ────────────────────────────────────────────────────────────
 function getFilteredProducts() {
     return products.filter(p => {
-        const matchesTab = p.status === currentTab;
-        const matchesSearch = p.title.toLowerCase().includes(searchQuery) || 
-                              p.description.toLowerCase().includes(searchQuery);
+        const matchesTab    = p.status === currentTab;
+        const matchesSearch = !searchQuery ||
+            p.title.toLowerCase().includes(searchQuery) ||
+            p.description.toLowerCase().includes(searchQuery);
         return matchesTab && matchesSearch;
     });
 }
 
+// ─── Empty state helper ───────────────────────────────────────────────────────
+function renderEmptyState() {
+    const isSearch = searchQuery.length > 0;
+    return `
+        <div class="flex flex-col items-center justify-center py-20 gap-4 text-center">
+            <div class="text-4xl">${isSearch ? '🔍' : currentTab === 'added' ? '📦' : '🤖'}</div>
+            <div class="text-sm font-bold text-gray-700">
+                ${isSearch
+                    ? `No results for "${searchQuery}"`
+                    : currentTab === 'added'
+                        ? 'No products added yet'
+                        : 'No discovered products yet'}
+            </div>
+            <div class="text-xs text-gray-400 max-w-xs leading-relaxed">
+                ${isSearch
+                    ? 'Try a different search term.'
+                    : currentTab === 'added'
+                        ? 'Click "Add Product" to add your first product to the catalog.'
+                        : 'Products shared in WhatsApp conversations will appear here automatically.'}
+            </div>
+        </div>
+    `;
+}
+
+// ─── Image grid view ──────────────────────────────────────────────────────────
 function renderImageView() {
     const filtered = getFilteredProducts();
-    if (filtered.length === 0) return `<p class="text-center text-gray-400 py-10">No products found.</p>`;
+    if (filtered.length === 0) return renderEmptyState();
 
     return `
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             ${filtered.map(p => `
                 <div data-sort-name="${p.title}" class="animate-card glass-panel rounded-3xl overflow-hidden group hover:shadow-2xl hover:shadow-gray-200/50 flex flex-col bg-white border border-gray-50">
                     <div class="anim-img relative h-52 w-full overflow-hidden bg-gray-100">
-                        <img data-src="${p.img}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 208'%3E%3Crect fill='%23f3f4f6' width='400' height='208'/%3E%3C/svg%3E" alt="${p.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 lazy-image" style="opacity: 0.6;">
+                        <img
+                            data-src="${p.img}"
+                            src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 208'%3E%3Crect fill='%23f3f4f6' width='400' height='208'/%3E%3C/svg%3E"
+                            alt="${p.title}"
+                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 lazy-image"
+                            style="opacity:0.6;"
+                        >
                         <div class="absolute top-3 right-3 z-10">
-                            <button onclick="document.getElementById('menu-img-${p.id}').classList.toggle('hidden')" onblur="setTimeout(() => document.getElementById('menu-img-${p.id}').classList.add('hidden'), 200)" class="w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center shadow-md hover:bg-white transition-colors">
+                            <button
+                                onclick="document.getElementById('menu-img-${p.id}').classList.toggle('hidden')"
+                                onblur="setTimeout(() => document.getElementById('menu-img-${p.id}').classList.add('hidden'), 200)"
+                                class="w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center shadow-md hover:bg-white transition-colors"
+                            >
                                 <span class="text-gray-800 font-bold">⋮</span>
                             </button>
                             <div id="menu-img-${p.id}" class="hidden absolute right-0 mt-2 w-28 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-20">
@@ -225,10 +278,11 @@ function renderImageView() {
     `;
 }
 
+// ─── List / table view ────────────────────────────────────────────────────────
 function renderListView() {
     const filtered = getFilteredProducts();
-    if (filtered.length === 0) return `<p class="text-center text-gray-400 py-10">No products found.</p>`;
-    
+    if (filtered.length === 0) return renderEmptyState();
+
     return `
         <div class="glass-panel rounded-3xl overflow-x-auto border border-gray-100 bg-white">
             <table class="w-full text-left min-w-[600px]">
@@ -246,7 +300,13 @@ function renderListView() {
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-4">
                                     <div class="anim-img shrink-0">
-                                        <img data-src="${p.img}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect fill='%23e5e7eb' width='48' height='48'/%3E%3C/svg%3E" alt="${p.title}" class="w-12 h-12 rounded-xl object-cover shadow-sm lazy-image" style="opacity: 0.6;">
+                                        <img
+                                            data-src="${p.img}"
+                                            src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect fill='%23e5e7eb' width='48' height='48'/%3E%3C/svg%3E"
+                                            alt="${p.title}"
+                                            class="w-12 h-12 rounded-xl object-cover shadow-sm lazy-image"
+                                            style="opacity:0.6;"
+                                        >
                                     </div>
                                     <span class="font-bold text-sm text-gray-800 truncate max-w-[150px]">${p.title}</span>
                                 </div>
@@ -257,7 +317,11 @@ function renderListView() {
                             </td>
                             <td class="px-6 py-4 text-center">
                                 <div class="relative inline-block text-left">
-                                    <button onclick="document.getElementById('menu-list-${p.id}').classList.toggle('hidden')" onblur="setTimeout(() => document.getElementById('menu-list-${p.id}').classList.add('hidden'), 200)" class="text-gray-400 hover:text-gray-800 transition-colors font-bold text-xl px-2">⋮</button>
+                                    <button
+                                        onclick="document.getElementById('menu-list-${p.id}').classList.toggle('hidden')"
+                                        onblur="setTimeout(() => document.getElementById('menu-list-${p.id}').classList.add('hidden'), 200)"
+                                        class="text-gray-400 hover:text-gray-800 transition-colors font-bold text-xl px-2"
+                                    >⋮</button>
                                     <div id="menu-list-${p.id}" class="hidden absolute right-4 top-8 w-28 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-20">
                                         <button class="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 text-gray-700 transition-colors">Edit</button>
                                         <button onclick="window.handleDeleteProduct('${p.id}')" class="w-full text-left px-4 py-2 text-xs hover:bg-red-50 text-red-600 border-t border-gray-50 transition-colors">Delete</button>
@@ -272,18 +336,25 @@ function renderListView() {
     `;
 }
 
-// Bind local functions to global scope to keep onclick handlers functional
-window.handleSearch = handleSearch;
-window.switchTab = switchTab;
-window.switchView = switchView;
+// ─── Expose onclick handlers to global scope ──────────────────────────────────
+window.handleSearch        = handleSearch;
+window.switchTab           = switchTab;
+window.switchView          = switchView;
 window.handleDeleteProduct = handleDeleteProduct;
 
-// Register Products page configuration
+// ─── Self-register with nav ───────────────────────────────────────────────────
 if (typeof PAGE_CONFIG !== 'undefined') {
     PAGE_CONFIG.products = {
-        title: 'Products',
+        title:       'Products',
         description: 'Manage your product catalog.',
-        navId: 'nav-products',
-        render: renderProductsPage
+        navId:       'nav-products',
+        render: function(passedBusinessId) {
+            const activeId = passedBusinessId || localStorage.getItem('business_id');
+            if (activeId) {
+                renderProductsPage(activeId);
+            } else {
+                console.error('[Products Error] No business ID available.');
+            }
+        }
     };
 }

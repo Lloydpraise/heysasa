@@ -6,100 +6,54 @@
     <link rel="icon" type="image/png" href="images/favicon.png">
     <title>Dashboard | HeySasa!</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="initSupabase.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Poppins', sans-serif;
-            background-color: #F7FBF9; /* Premium off-white with subtle green tint */
-            color: #0F172A; /* Deep slate instead of harsh black */
-            overflow: hidden; 
+            background-color: #F7FBF9;
+            color: #0F172A;
+            overflow: hidden;
             position: relative;
         }
 
-        /* Grainy Texture Overlay */
         .bg-grain-container {
             position: fixed;
-            top: 0; 
-            left: 0; 
-            width: 100vw; 
-            height: 100vh;
+            top: 0; left: 0; width: 100vw; height: 100vh;
             pointer-events: none;
             z-index: -2;
         }
         .bg-grain {
-            width: 100%;
-            height: 100%;
-            opacity: 0.25; /* Slightly reduced for a cleaner look */
+            width: 100%; height: 100%;
+            opacity: 0.25;
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
         }
 
-        /* Mesh Gradient Blobs - Green Dominant, Orange Accent */
         .mesh-bg {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: -1;
-            overflow: hidden;
+            position: fixed; top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            z-index: -1; overflow: hidden;
             background: #F7FBF9;
         }
-        
         .blob {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(120px); /* Higher blur for smoother gradients */
-            opacity: 0.35;
+            position: absolute; border-radius: 50%;
+            filter: blur(120px); opacity: 0.35;
             animation: float 15s infinite ease-in-out alternate;
-            display: none;
         }
-
-        .blob-1 {
-            background: #28A745; /* Brand Green */
-            width: 45vw;
-            height: 45vw;
-            top: -10vw;
-            left: -10vw;
-        }
-
-        .blob-2 {
-            background: #FF8C00; /* Brand Orange */
-            width: 30vw;
-            height: 30vw;
-            top: 15vw;
-            right: -5vw;
-            animation-delay: -4s;
-            opacity: 0.25; /* Keep orange subtle so it doesn't overpower */
-        }
-
-        .blob-3 {
-            background: #86efac; /* Soft light green to bridge */
-            width: 35vw;
-            height: 35vw;
-            bottom: -10vw;
-            left: 15vw;
-            animation-delay: -7s;
-        }
-
+        .blob-1 { background: #28A745; width: 45vw; height: 45vw; top: -10vw; left: -10vw; }
+        .blob-2 { background: #FF8C00; width: 30vw; height: 30vw; top: 15vw; right: -5vw; animation-delay: -4s; opacity: 0.25; }
+        .blob-3 { background: #86efac; width: 35vw; height: 35vw; bottom: -10vw; left: 15vw; animation-delay: -7s; }
         @keyframes float {
             0% { transform: translate(0, 0) scale(1); }
             100% { transform: translate(30px, 50px) scale(1.05); }
         }
 
-        /* High-End Glassmorphism */
         .glass-panel {
             background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(24px); /* Extreme blur */
+            backdrop-filter: blur(24px);
             -webkit-backdrop-filter: blur(24px);
             border: 1px solid rgba(255, 255, 255, 0.7);
-            box-shadow: 
-                0 4px 6px -1px rgba(0, 0, 0, 0.05),
-                0 10px 40px -5px rgba(0, 0, 0, 0.03),
-                inset 0 1px 0 rgba(255, 255, 255, 0.8); /* Inner top highlight */
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 10px 40px -5px rgba(0,0,0,0.03), inset 0 1px 0 rgba(255,255,255,0.8);
         }
-
         .glass-card {
             background: rgba(255, 255, 255, 0.6);
             backdrop-filter: blur(16px);
@@ -110,128 +64,46 @@
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* Sidebar Navigation Items - Premium Layout */
         .nav-item {
-            display: flex;
-            align-items: center;
-            padding: 0.6rem 0.75rem;
-            border-radius: 1rem;
-            color: #64748B; 
-            font-weight: 500;
-            font-size: 0.9rem;
-            transition: all 0.2s ease;
-            position: relative;
+            display: flex; align-items: center;
+            padding: 0.6rem 0.75rem; border-radius: 1rem;
+            color: #64748B; font-weight: 500; font-size: 0.9rem;
+            transition: all 0.2s ease; position: relative;
         }
-
-        /* Icon Container for that structured, app-like feel */
         .nav-icon-box {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 36px;
-            height: 36px;
-            border-radius: 0.75rem;
-            background: rgba(255, 255, 255, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            color: #64748B;
-            transition: all 0.2s ease;
+            display: flex; align-items: center; justify-content: center;
+            width: 36px; height: 36px; border-radius: 0.75rem;
+            background: rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.8);
+            color: #64748B; transition: all 0.2s ease;
             box-shadow: 0 2px 5px rgba(0,0,0,0.02);
         }
-
-        .nav-item:hover {
-            color: #1E293B;
-            background: rgba(255, 255, 255, 0.4);
-        }
-
-        .nav-item:hover .nav-icon-box {
-            background: rgba(255, 255, 255, 0.9);
-            color: #28A745;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-        }
-
-        /* Active State with Orange Accent */
-        .nav-item.active {
-            background: rgba(255, 255, 255, 0.7);
-            color: #0F172A;
-            font-weight: 600;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
-        }
-        
-        .nav-item.active .nav-icon-box {
-            background: #28A745;
-            border-color: #28A745;
-            color: white;
-            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
-        }
-
-        /* Orange dot indicator for active state */
+        .nav-item:hover { color: #1E293B; background: rgba(255,255,255,0.4); }
+        .nav-item:hover .nav-icon-box { background: rgba(255,255,255,0.9); color: #28A745; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .nav-item.active { background: rgba(255,255,255,0.7); color: #0F172A; font-weight: 600; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
+        .nav-item.active .nav-icon-box { background: #28A745; border-color: #28A745; color: white; box-shadow: 0 4px 15px rgba(40,167,69,0.3); }
         .nav-item.active::before {
-            content: '';
-            position: absolute;
-            left: -4px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 4px;
-            height: 16px;
-            background-color: #FF8C00;
-            border-radius: 0 4px 4px 0;
+            content: ''; position: absolute; left: -4px; top: 50%; transform: translateY(-50%);
+            width: 4px; height: 16px; background-color: #FF8C00; border-radius: 0 4px 4px 0;
         }
-
         .nav-section-title {
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: #94A3B8;
-            font-weight: 700;
-            margin-top: 1.5rem;
-            margin-bottom: 0.5rem;
-            padding-left: 0.75rem;
+            font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em;
+            color: #94A3B8; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.5rem; padding-left: 0.75rem;
         }
 
-        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(15, 23, 42, 0.1); border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(15, 23, 42, 0.2); }
+        ::-webkit-scrollbar-thumb { background: rgba(15,23,42,0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(15,23,42,0.2); }
 
-        /* Skeleton Pulse Animation */
-        @keyframes shimmer {
-            0% { background-position: -1000px 0; }
-            100% { background-position: 1000px 0; }
+        /* Page transition */
+        #content-area {
+            transition: opacity 0.25s ease;
         }
-        .skeleton-box {
-            background: #e2e8f0;
-            background-image: linear-gradient(90deg, rgba(255,255,255,0) 0, rgba(255,255,255,0.6) 20%, rgba(255,255,255,0) 40%);
-            background-size: 1000px 100%;
-            animation: shimmer 2s infinite linear;
-            border-radius: 0.5rem;
+        #content-area.fading {
+            opacity: 0;
+            pointer-events: none;
         }
     </style>
-    <!-- Put this inside the <head> tag of dashboard.html -->
-<script type="module">
-    import { supabase } from './supabaseClient.js';
-
-    async function checkAuthGuard() {
-        // Check if both business_id and session_id exist in localStorage
-        const businessId = localStorage.getItem('business_id');
-        const sessionId = localStorage.getItem('session_id');
-
-        if (!businessId || !sessionId) {
-            console.warn("Missing business_id or session_id in localStorage. Redirecting to login...");
-            window.location.href = 'login.html';
-            return;
-        }
-
-        // Save to global memory for your services to use
-        window.currentBusinessId = businessId;
-        window.currentSessionId = sessionId;
-        
-        console.log("Auth guard passed. Business ID:", businessId, "Session ID:", sessionId);
-    }
-
-    // Run immediately before page loads
-    checkAuthGuard();
-</script>
 </head>
 <body class="antialiased h-screen w-screen flex p-4 gap-6">
 
@@ -242,7 +114,7 @@
         <div class="blob blob-3"></div>
     </div>
 
-        <div id="mobile-overlay" class="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-[90] hidden md:hidden transition-opacity" onclick="toggleMobileMenu()"></div>
+    <div id="mobile-overlay" class="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-[90] hidden md:hidden transition-opacity" onclick="toggleMobileMenu()"></div>
 
     <aside id="sidebar" class="group glass-panel w-64 md:w-[88px] md:hover:w-64 fixed md:relative -left-full md:left-0 top-4 md:top-auto h-[calc(100vh-2rem)] md:h-full z-[100] flex flex-col overflow-x-hidden shadow-2xl shadow-[#28A745]/5 transition-all duration-300 ease-in-out rounded-[2rem]">
         
@@ -250,7 +122,7 @@
             <img src="images/heysasalogo1.png" alt="HeySasa! Logo" class="h-8 w-auto drop-shadow-sm max-w-[150px] md:max-w-0 md:group-hover:max-w-[150px] opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 origin-left">
         </div>
 
-        <div class="flex-1 overflow-y-auto py-6 px-4 flex flex-col gap-1 overflow-x-hidden custom-scrollbar">
+        <div class="flex-1 overflow-y-auto py-6 px-4 flex flex-col gap-1 overflow-x-hidden">
             <a href="#" class="nav-item" id="nav-overview">
                 <div class="nav-icon-box shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
@@ -258,7 +130,7 @@
                 <span class="ml-4 md:ml-0 md:group-hover:ml-4 max-w-[150px] md:max-w-0 md:group-hover:max-w-[150px] opacity-100 md:opacity-0 md:group-hover:opacity-100 overflow-hidden whitespace-nowrap transition-all duration-300">Overview</span>
             </a>
 
-            <a href="#" class="nav-item active" id="nav-analytics">
+            <a href="#" class="nav-item" id="nav-analytics">
                 <div class="nav-icon-box shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M12 16v5"/><path d="M16 14.639V21"/><path d="M20 10.656V21"/><path d="m22 3-8.646 8.646a.5.5 0 0 1-.708 0L9.354 8.354a.5.5 0 0 0-.707 0L2 15"/><path d="M4 18.463V21"/><path d="M8 14.656V21"/></svg>
                 </div>
@@ -279,15 +151,16 @@
                 <span class="ml-4 md:ml-0 md:group-hover:ml-4 max-w-[150px] md:max-w-0 md:group-hover:max-w-[150px] opacity-100 md:opacity-0 md:group-hover:opacity-100 overflow-hidden whitespace-nowrap transition-all duration-300">Products</span>
             </a>
 
-            <a href="#" class="nav-item" id="nav-preferences"> 
-    <div class="nav-icon-box shrink-0">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    </div>
-    <span class="ml-4 md:ml-0 md:group-hover:ml-4 max-w-[150px] md:max-w-0 md:group-hover:max-w-[150px] opacity-100 md:opacity-0 md:group-hover:opacity-100 overflow-hidden whitespace-nowrap transition-all duration-300">Preferences</span>
-</a>
+            <a href="#" class="nav-item" id="nav-preferences">
+                <div class="nav-icon-box shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                </div>
+                <span class="ml-4 md:ml-0 md:group-hover:ml-4 max-w-[150px] md:max-w-0 md:group-hover:max-w-[150px] opacity-100 md:opacity-0 md:group-hover:opacity-100 overflow-hidden whitespace-nowrap transition-all duration-300">Preferences</span>
+            </a>
+
             <div class="nav-section-title max-w-[150px] md:max-w-0 md:group-hover:max-w-[150px] opacity-100 md:opacity-0 md:group-hover:opacity-100 overflow-hidden whitespace-nowrap transition-all duration-300">Your AI</div>
             
-            <a href="#" class="nav-item" id="nav-playground"> 
+            <a href="#" class="nav-item" id="nav-playground">
                 <div class="nav-icon-box shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M12 18V5"/><path d="M15 13a4.17 4.17 0 0 1-3-4 4.17 4.17 0 0 1-3 4"/><path d="M17.598 6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"/><path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"/><path d="M18 18a4 4 0 0 0 2-7.464"/><path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"/><path d="M6 18a4 4 0 0 1-2-7.464"/><path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"/></svg>
                 </div>
@@ -297,17 +170,15 @@
 
         <div class="p-4 border-t border-white/20 bg-white/5 mt-auto relative shrink-0">
             <div id="profile-trigger" class="flex items-center p-3 rounded-2xl hover:bg-white/60 border border-transparent hover:border-white/80 transition-all duration-300 cursor-pointer hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] active:scale-[0.97] overflow-hidden">
-                
                 <div class="relative shrink-0 mx-auto md:mx-0">
-                    <div id="profile-initials" class="w-12 h-12 rounded-xl bg-gradient-to-br from-[#28A745] via-[#208739] to-[#1e7e34] text-white flex items-center justify-center font-bold text-base shadow-[0_4px_15px_rgba(40,167,69,0.3)] hover:shadow-[0_4px_25px_rgba(40,167,69,0.5)] transition-all duration-500">
-                        LP
+                    <div id="profile-initials" class="w-12 h-12 rounded-xl bg-gradient-to-br from-[#28A745] via-[#208739] to-[#1e7e34] text-white flex items-center justify-center font-bold text-base shadow-[0_4px_15px_rgba(40,167,69,0.3)]">
+                        --
                     </div>
                     <span class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-[3px] border-[#F7FBF9] rounded-full shadow-sm animate-pulse"></span>
                 </div>
-
                 <div class="flex flex-col min-w-0 max-w-[200px] md:max-w-0 md:group-hover:max-w-[200px] ml-4 md:ml-0 md:group-hover:ml-4 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 overflow-hidden">
-                    <span id="profile-name" class="text-[15px] font-bold text-[#0F172A] tracking-tight truncate leading-none">Lloyd Praise</span>
-                    <span id="profile-email" class="text-[11px] text-[#64748B] font-semibold truncate opacity-80 hover:opacity-100 mt-1 transition-opacity">lloydpraise@example.com</span>
+                    <span id="profile-name" class="text-[15px] font-bold text-[#0F172A] tracking-tight truncate leading-none">Loading...</span>
+                    <span id="profile-email" class="text-[11px] text-[#64748B] font-semibold truncate opacity-80 mt-1">...</span>
                 </div>
             </div>
 
@@ -331,45 +202,26 @@
         <header class="glass-panel rounded-[2rem] px-8 py-5 flex justify-between items-center shadow-lg shadow-[#28A745]/5">
             <div class="flex items-center gap-4">
                 <button onclick="toggleMobileMenu()" class="md:hidden flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full text-[#28A745] hover:bg-[#28A745]/10 active:scale-95 transition-all" aria-label="Toggle menu">
-    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path>
-    </svg>
-</button>
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path></svg>
+                </button>
                 <div>
-                    <h1 id="section-title" class="text-2xl font-bold text-[#0F172A] tracking-tight">Analytics</h1>
-                    <p id="section-description" class="text-sm text-[#64748B] font-medium mt-1">Overview of your business performance.</p>
+                    <h1 id="section-title" class="text-2xl font-bold text-[#0F172A] tracking-tight">Overview</h1>
+                    <p id="section-description" class="text-sm text-[#64748B] font-medium mt-1">A high-level view of your system operations.</p>
                 </div>
             </div>
         </header>
 
+        <!-- Single content panel — render functions write directly into #content-area -->
         <div class="flex-1 flex gap-4 overflow-hidden">
-            <div class="glass-panel rounded-[2rem] flex-1 p-8 overflow-y-auto relative shadow-xl shadow-[#28A745]/5 border-t border-white/80">
-                <div id="skeleton-loader" class="absolute inset-0 z-20 p-8 space-y-8 bg-white/90 backdrop-blur-sm">
-                    <div class="flex justify-between items-center">
-                        <div class="skeleton-box h-11 w-64 rounded-xl"></div>
-                        <div class="flex gap-3"><div class="skeleton-box h-11 w-24 rounded-xl"></div><div class="skeleton-box h-11 w-11 rounded-xl"></div></div>
-                    </div>
-                    <div class="grid grid-cols-4 gap-6">
-                        <div class="p-4 rounded-2xl border border-white/50 bg-white/30 flex flex-col gap-4"><div class="skeleton-box h-32 w-full rounded-xl"></div><div class="skeleton-box h-4 w-3/4"></div></div>
-                        <div class="p-4 rounded-2xl border border-white/50 bg-white/30 flex flex-col gap-4"><div class="skeleton-box h-32 w-full rounded-xl"></div><div class="skeleton-box h-4 w-3/4"></div></div>
-                        <div class="p-4 rounded-2xl border border-white/50 bg-white/30 flex flex-col gap-4"><div class="skeleton-box h-32 w-full rounded-xl"></div><div class="skeleton-box h-4 w-3/4"></div></div>
-                        <div class="p-4 rounded-2xl border border-white/50 bg-white/30 flex flex-col gap-4"><div class="skeleton-box h-32 w-full rounded-xl"></div><div class="skeleton-box h-4 w-3/4"></div></div>
-                    </div>
-                </div>
-
-                <div id="content-area" class="absolute inset-0 z-10 p-8 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-700">
-                    <div class="glass-card p-10 text-center max-w-md w-full shadow-2xl">
-                        <div class="w-16 h-16 bg-[#28A745]/10 rounded-2xl flex items-center justify-center mx-auto mb-5">
-                            <svg class="w-8 h-8 text-[#28A745]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                        </div>
-                        <h3 class="text-xl font-bold text-[#0F172A] mb-2">Analytics UI Ready</h3>
-                        <p class="text-sm text-[#64748B] leading-relaxed">The Dashboard data will be visualized here.</p>
-                    </div>
+            <div class="glass-panel rounded-[2rem] flex-1 overflow-y-auto relative shadow-xl shadow-[#28A745]/5 border-t border-white/80">
+                <div id="content-area" class="w-full h-full p-8">
+                    <!-- Populated by page render functions -->
                 </div>
             </div>
         </div>
     </main>
 
+    <!-- Password Modal -->
     <div id="password-modal" class="fixed inset-0 z-[110] hidden flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closePasswordModal()"></div>
         <div class="glass-panel w-full max-w-md rounded-[2rem] relative z-10 p-8 shadow-2xl border border-white/50">
@@ -391,19 +243,60 @@
         </div>
     </div>
 
+    <!-- Toast -->
     <div id="success-toast" class="fixed bottom-10 right-10 z-[120] translate-y-20 opacity-0 transition-all duration-500 pointer-events-none">
         <div class="bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10">
             <div class="w-8 h-8 bg-[#28A745] rounded-full flex items-center justify-center">
                 <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
             </div>
-            <span class="font-bold text-sm">successfully changed</span>
+            <span id="toast-message" class="font-bold text-sm">Done!</span>
         </div>
     </div>
 
+    <!-- Follow-ups Drawer -->
+    <div id="followupsDrawer" class="fu-drawer hidden">
+        <div class="fu-drawer-header">
+            <h3 style="margin:0; font-size:16px; font-weight:700; color:#0F172A;">Follow-Up Steps</h3>
+            <button onclick="closeFollowupsDrawer()" style="background:none; border:none; font-size:18px; cursor:pointer; color:#64748B;">✕</button>
+        </div>
+        <div class="fu-drawer-body"></div>
+    </div>
+
+    <!-- Record Purchase Modal -->
+    <div id="boughtModal" class="modal-overlay hidden">
+        <div class="bought-modal">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+                <h3 style="margin:0; font-size:16px; font-weight:700; color:#0F172A;">🎉 Record Purchase</h3>
+                <button onclick="closeBoughtModal()" style="background:none; border:none; font-size:18px; cursor:pointer; color:#64748B;">✕</button>
+            </div>
+            <div class="modal-field">
+                <label>Product Name</label>
+                <input type="text" id="modalProductInput" placeholder="e.g. Premium Package">
+            </div>
+            <div class="modal-field">
+                <label>Amount (KES)</label>
+                <input type="number" id="modalAmountInput" placeholder="e.g. 3500">
+            </div>
+            <button class="btn-confirm-purchase" onclick="confirmPurchase()">Confirmed Purchase</button>
+        </div>
+    </div>
+
+    <!--
+        SCRIPT LOAD ORDER — IMPORTANT
+        1. supabaseClient.js  — exposes window.supabase
+        2. auth.js            — exposes handleLogout(), openPasswordModal(), etc.
+        3. navigation.js      — exposes window.switchPage(), sets up nav clicks
+        4. Page scripts       — register their render functions on window.*
+        5. init (inline)      — runs auth guard, then kicks off navigation
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="initSupabase.js"></script>
     <script src="js/supabaseClient.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/navigation.js"></script>
+    <script src="js/onboarding.js"></script>
     <script src="js/overview.js"></script>
+    <script src="js/overviewRouter.js"></script>
     <script src="js/analytics.js"></script>
     <script src="js/product.js"></script>
     <script src="js/leads.js"></script>
@@ -412,65 +305,33 @@
     <script src="js/preferences.js"></script>
     <script src="js/playground.js"></script>
     <script src="js/profile.js"></script>
-    
+
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => {
-                const skeleton = document.getElementById('skeleton-loader');
-                const content = document.getElementById('content-area');
-                if(skeleton) skeleton.style.display = 'none';
-                if(content) content.classList.remove('opacity-0', 'pointer-events-none');
-            }, 1500);
-        });
-        // Mobile sidebar toggle logic
-        function toggleMobileMenu() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('mobile-overlay');
-            
-            sidebar.classList.toggle('-left-full');
-            sidebar.classList.toggle('left-4');
-            overlay.classList.toggle('hidden');
+    // ─── Profile & Global Variable Setup ─────────────────────────────────────
+    (function initDashboardState() {
+        const businessId = localStorage.getItem('business_id');
+        const sessionId  = localStorage.getItem('session_id');
+
+        if (!businessId) return; // navigation.js will handle the actual auth redirect safely
+
+        // Expose globally so older scripts can read them
+        window.currentBusinessId = businessId;
+        window.currentSessionId  = sessionId;
+
+        // Let profile.js populate the sidebar avatar/name
+        if (typeof window.loadProfileData === 'function') {
+            window.loadProfileData(businessId);
         }
-    </script>
-    <!-- Follow-ups Drawer Container -->
-<div id="followupsDrawer" class="fu-drawer hidden">
-  <div class="fu-drawer-header">
-    <h3 style="margin:0; font-size:16px; font-weight:700; color:#0F172A;">11 Follow-Up Steps</h3>
-    <button onclick="closeFollowupsDrawer()" style="background:none; border:none; font-size:18px; cursor:pointer; color:#64748B;">✕</button>
-  </div>
-  <div class="fu-drawer-body"></div>
-</div>
-<!-- Record Purchase Modal -->
-<div id="boughtModal" class="modal-overlay hidden">
-  <div class="bought-modal">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
-      <h3 style="margin:0; font-size:16px; font-weight:700; color:#0F172A;">🎉 Record Purchase</h3>
-      <button onclick="closeBoughtModal()" style="background:none; border:none; font-size:18px; cursor:pointer; color:#64748B;">✕</button>
-    </div>
-    <div class="modal-field">
-      <label>Product Name</label>
-      <input type="text" id="modalProductInput" placeholder="e.g. Premium Package">
-    </div>
-    <div class="modal-field">
-      <label>Amount (KES)</label>
-      <input type="number" id="modalAmountInput" placeholder="e.g. 3500">
-    </div>
-    <button class="btn-confirm-purchase" onclick="confirmPurchase()">Confirmed Purchase</button>
-  </div>
-</div>
-</body>
-      <button onclick="closeBoughtModal()" style="background:none; border:none; font-size:18px; cursor:pointer; color:#64748B;">✕</button>
-    </div>
-    <div class="modal-field">
-      <label>Product Name</label>
-      <input type="text" id="modalProductInput" placeholder="e.g. Premium Package">
-    </div>
-    <div class="modal-field">
-      <label>Amount (KES)</label>
-      <input type="number" id="modalAmountInput" placeholder="e.g. 3500">
-    </div>
-    <button class="btn-confirm-purchase" onclick="confirmPurchase()">Confirmed Purchase</button>
-  </div>
-</div>
+    })();
+
+    // ─── Mobile sidebar ───────────────────────────────────────────────────────
+    function toggleMobileMenu() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('mobile-overlay');
+        sidebar.classList.toggle('-left-full');
+        sidebar.classList.toggle('left-4');
+        overlay.classList.toggle('hidden');
+    }
+</script>
 </body>
 </html>

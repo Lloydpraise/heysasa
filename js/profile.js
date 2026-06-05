@@ -1,72 +1,106 @@
 /**
  * Profile Management for HeySasa! Dashboard
- * Identity: Lloyd Praise
- * Integration: window.getSupabase()
+ * Pulls and saves directly to public.businesses table
  */
 
-document.addEventListener('DOMContentLoaded', async () => {
+// Expose globally so dashboard.html or navigation.js can trigger it
+window.loadProfileData = async function(businessId) {
+    const activeId = businessId || localStorage.getItem('business_id');
+    if (!activeId) return;
+
+    const sb = window.getSupabase ? window.getSupabase() : window.supabase;
+    if (!sb) {
+        displayDefaultUser();
+        return;
+    }
+
+    try {
+        // Fetch from the real businesses table
+        const { data: business, error } = await sb
+            .from('businesses')
+            .select('name, owner_email')
+            .eq('business_id', activeId)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        if (business) {
+            const displayName = business.name || "Lloyd Praise";
+            const displayEmail = business.owner_email || "lloydpraise@example.com";
+            updateProfileUI(displayName, displayEmail);
+        } else {
+            displayDefaultUser();
+        }
+
+    } catch (err) {
+        console.error('[Profile] Failed to load profile data from businesses table:', err);
+        displayDefaultUser();
+    }
+};
+
+// UI Render Helpers
+function displayDefaultUser() {
+    updateProfileUI("Lloyd Praise", "lloydpraise@example.com");
+}
+
+function updateProfileUI(name, email) {
+    const nameEl = document.getElementById('profile-name');
+    const emailEl = document.getElementById('profile-email');
+    const initialsEl = document.getElementById('profile-initials');
+
+    if (nameEl) nameEl.textContent = name;
+    if (emailEl) emailEl.textContent = email;
+    
+    if (initialsEl) {
+        const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+        initialsEl.textContent = initials || 'LP';
+    }
+}
+
+// Function to handle inline name changes from the dashboard layout
+window.updateBusinessName = async function() {
+    const activeId = localStorage.getItem('business_id');
+    if (!activeId) return;
+
+    const currentName = document.getElementById('profile-name')?.textContent || "";
+    const newName = prompt("Enter new business name:", currentName);
+    
+    if (!newName || newName.trim() === "" || newName === currentName) return;
+
+    const sb = window.getSupabase ? window.getSupabase() : window.supabase;
+    if (!sb) {
+        alert("Database connection offline.");
+        return;
+    }
+
+    try {
+        const { error } = await sb
+            .from('businesses')
+            .update({ name: newName.trim() })
+            .eq('business_id', activeId);
+
+        if (error) throw error;
+
+        // Refresh elements across UI instantly
+        window.loadProfileData(activeId);
+
+    } catch (err) {
+        alert("Failed to save name: " + err.message);
+    }
+};
+
+// Wire up dropdown menus and modal triggers when DOM is interactive
+document.addEventListener('DOMContentLoaded', () => {
     const profileTrigger = document.getElementById('profile-trigger');
     const profileMenu = document.getElementById('profile-menu');
 
-    /**
-     * 1. Load & Display User Data from Live Supabase Auth
-     */
-    async function loadUserProfile() {
-        // Fallback check for both common initialization methods
-        const sb = window.getSupabase ? window.getSupabase() : window.supabase;
-        
-        if (!sb) {
-            displayDefaultUser();
-            return;
-        }
-
-        try {
-            const { data: { user }, error } = await sb.auth.getUser();
-
-            if (error || !user) {
-                displayDefaultUser();
-                return;
-            }
-
-            // Fallback to Lloyd Praise if no metadata name is configured yet
-            const fullName = user.user_metadata?.full_name || "Lloyd Praise";
-            updateProfileUI(fullName, user.email);
-
-        } catch (err) {
-            displayDefaultUser();
-        }
-    }
-
-    function displayDefaultUser() {
-        updateProfileUI("Lloyd Praise", "lloydpraise@example.com");
-    }
-
-    function updateProfileUI(name, email) {
-        const nameEl = document.getElementById('profile-name');
-        const emailEl = document.getElementById('profile-email');
-        const initialsEl = document.getElementById('profile-initials');
-
-        if (nameEl) nameEl.textContent = name;
-        if (emailEl) emailEl.textContent = email;
-        
-        if (initialsEl) {
-            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
-            initialsEl.textContent = initials || 'LP';
-        }
-    }
-
-    /**
-     * 2. Robust Profile Menu Toggle
-     */
     if (profileTrigger && profileMenu) {
         profileTrigger.addEventListener('click', (e) => {
             e.preventDefault();
-            e.stopPropagation(); // Stops background listener from closing it instantly
-            
+            e.stopPropagation();
             profileMenu.classList.toggle('hidden');
         });
 
-        // Close menu when clicking anywhere else on the page
         document.addEventListener('click', (e) => {
             if (!profileMenu.contains(e.target) && !profileTrigger.contains(e.target)) {
                 profileMenu.classList.add('hidden');
@@ -74,11 +108,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    loadUserProfile();
+    // Run immediately if business_id is already cached on load
+    const businessId = localStorage.getItem('business_id');
+    if (businessId) {
+        window.loadProfileData(businessId);
+    }
 });
 
 /**
- * 3. Change Password Logic (Connected to Supabase Auth)
+ * Change Password Logic (Connected to Supabase Auth)
  */
 function openPasswordModal() {
     const modal = document.getElementById('password-modal');
@@ -114,24 +152,19 @@ async function submitPasswordChange() {
     }
 
     try {
-        // Send live password update request to Supabase Auth
         const { error } = await sb.auth.updateUser({ password: newPass });
-        
         if (error) throw error;
 
-        // Success UI flow
         closePasswordModal();
 
         const toast = document.getElementById('success-toast');
         if (toast) {
             toast.classList.remove('translate-y-20', 'opacity-0');
-            
             setTimeout(() => {
                 toast.classList.add('translate-y-20', 'opacity-0');
             }, 3000);
         }
 
-        // Clear values safely
         document.getElementById('old-password').value = "";
         document.getElementById('new-password').value = "";
 
@@ -141,7 +174,7 @@ async function submitPasswordChange() {
 }
 
 /**
- * 4. Logout Logic (Signs out session and breaks cache)
+ * Logout Logic (Signs out session and breaks cache)
  */
 async function handleLogout() {
     const sb = window.getSupabase ? window.getSupabase() : window.supabase;
@@ -152,6 +185,5 @@ async function handleLogout() {
             console.error("Logout session error:", err.message);
         }
     }
-    // Wipe local cache targets if applicable and redirect back to login gate
     window.location.href = 'login.html';
 }

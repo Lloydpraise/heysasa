@@ -1,136 +1,98 @@
-import { supabase } from './supabaseClient.js';
-import { cacheManager } from './cacheManager.js';
+// =========================================================================
+// PRODUCT DATA SERVICE
+// =========================================================================
 
-export const productService = {
-  // Fetch all products for a specific business (with Caching)
-  async fetchProducts(businessId) {
-    try {
-      // 1. Try to get data from local cache first
-      const cachedData = cacheManager.get(businessId, 'products');
-      if (cachedData) {
-        return { success: true, data: cachedData, fromCache: true };
-      }
+window.productService = {
 
-      // 2. If no cache, pull fresh data from Supabase
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('business_id', businessId)
-        .order('created_at', { ascending: false });
+    /**
+     * Fetch all products for a business.
+     * Returns both manually-added and AI-discovered products in one query —
+     * the UI separates them by the `source` field.
+     *
+     * @param {string} businessId
+     * @returns {{ success: boolean, data: Array, error: string|null }}
+     */
+    fetchProducts: async (businessId) => {
+        const client = window.getSupabase();
+        if (!client) {
+            console.error('[ProductService] Supabase client is uninitialized.');
+            return { success: false, data: [], error: 'No Supabase client.' };
+        }
 
-      if (error) throw error;
+        try {
+            const { data, error } = await client
+                .from('products')
+                .select(`
+                    id,
+                    title,
+                    description_short,
+                    price,
+                    old_price,
+                    images,
+                    source,
+                    stock_quantity,
+                    is_visible,
+                    type,
+                    product_type,
+                    created_at
+                `)
+                .eq('business_id', businessId)
+                .eq('is_visible', true)
+                .order('created_at', { ascending: false });
 
-      // Map DB fields to frontend format
-      const mappedProducts = data.map(p => ({
-        id: p.id,
-        title: p.title,
-        description: p.description_short || p.description_long || '',
-        price: p.price || 0,
-        img: p.images && p.images.length > 0 ? p.images[0] : 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=400',
-        status: p.source === 'manual' ? 'added' : 'discovered',
-        raw: p
-      }));
+            if (error) throw error;
 
-      // 3. Save the fresh data to cache for next time
-      cacheManager.set(businessId, 'products', mappedProducts);
+            // Normalise rows into the flat shape the UI expects
+            const normalised = (data || []).map(row => ({
+                id:          row.id,
+                title:       row.title                          || 'Untitled Product',
+                description: row.description_short             || '',
+                price:       row.price != null
+                                 ? Number(row.price).toLocaleString('en-KE')
+                                 : '—',
+                img:         Array.isArray(row.images) && row.images.length > 0
+                                 ? row.images[0]
+                                 : 'https://placehold.co/400x208/f3f4f6/94a3b8?text=No+Image',
+                // Tab routing: 'manual' → Added Products tab; everything else → Discovered tab
+                status:      row.source === 'manual' ? 'added' : 'discovered',
+                stock:       row.stock_quantity ?? 0,
+                type:        row.type           || 'product',
+                product_type: row.product_type  || null,
+            }));
 
-      return { success: true, data: mappedProducts };
-    } catch (error) {
-      console.error('Error fetching products:', error);
-      return { success: false, error: error.message };
-    }
-  },
+            return { success: true, data: normalised, error: null };
 
-  // Add a new product
-  async addProduct(productData) {
-    try {
-      const payload = {
-        id: productData.id || crypto.randomUUID(),
-        business_id: productData.business_id,
-        title: productData.title,
-        description_short: productData.description,
-        price: parseFloat(productData.price),
-        images: productData.img ? [productData.img] : [],
-        source: productData.status === 'discovered' ? 'scraped' : 'manual',
-        type: 'product',
-        is_visible: true
-      };
+        } catch (err) {
+            console.error('[ProductService] fetchProducts failed:', err);
+            return { success: false, data: [], error: err.message };
+        }
+    },
 
-      const { data, error } = await supabase
-        .from('products')
-        .insert([payload])
-        .select()
-        .single();
+    /**
+     * Hard-delete a product row by its primary key.
+     *
+     * @param {string} productId
+     * @returns {{ success: boolean, error: string|null }}
+     */
+    deleteProduct: async (productId) => {
+        const client = window.getSupabase();
+        if (!client) {
+            return { success: false, error: 'No Supabase client.' };
+        }
 
-      if (error) throw error;
+        try {
+            const { error } = await client
+                .from('products')
+                .delete()
+                .eq('id', productId);
 
-      // Invalidate cache so it pulls clean on next page load
-      cacheManager.invalidate(productData.business_id, 'products');
+            if (error) throw error;
 
-      return { success: true, data: data };
-    } catch (error) {
-      console.error('Error adding product:', error);
-      return { success: false, error: error.message };
-    }
-  },
+            return { success: true, error: null };
 
-  // Update an existing product
-  async updateProduct(productId, updates) {
-    try {
-      const payload = {};
-      if (updates.title !== undefined) payload.title = updates.title;
-      if (updates.description !== undefined) payload.description_short = updates.description;
-      if (updates.price !== undefined) payload.price = parseFloat(updates.price);
-      if (updates.img !== undefined) payload.images = [updates.img];
-      if (updates.status !== undefined) payload.source = updates.status === 'discovered' ? 'scraped' : 'manual';
-
-      const { data, error } = await supabase
-        .from('products')
-        .update(payload)
-        .eq('id', productId)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Invalidate cache on modification
-      if (data) {
-        cacheManager.invalidate(data.business_id, 'products');
-      }
-
-      return { success: true, data: data };
-    } catch (error) {
-      console.error('Error updating product:', error);
-      return { success: false, error: error.message };
-    }
-  },
-
-  // Delete a product
-  async deleteProduct(productId) {
-    try {
-      // Get business id before deleting to clear the correct cache
-      const { data: product } = await supabase
-        .from('products')
-        .select('business_id')
-        .eq('id', productId)
-        .single();
-
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', productId);
-
-      if (error) throw error;
-
-      if (product) {
-        cacheManager.invalidate(product.business_id, 'products');
-      }
-
-      return { success: true };
-    } catch (error) {
-      console.error('Error deleting product:', error);
-      return { success: false, error: error.message };
-    }
-  }
+        } catch (err) {
+            console.error('[ProductService] deleteProduct failed:', err);
+            return { success: false, error: err.message };
+        }
+    },
 };
-

@@ -9,7 +9,14 @@ if (typeof PAGE_CONFIG !== 'undefined') {
         title: 'The Playground',
         description: 'Train models, upload knowledge base documents, and simulate scenarios.',
         navId: 'nav-playground',
-        render: renderPlayground
+        render: function(passedBusinessId) {
+            const activeId = passedBusinessId || localStorage.getItem('business_id');
+            if (activeId) {
+                renderPlayground(activeId);
+            } else {
+                console.error('[Playground Error] No business ID available.');
+            }
+        }
     };
 }
 
@@ -105,7 +112,7 @@ function injectPlaygroundStyles() {
 }
 
 // 4. The Main Renderer
-function renderPlayground() {
+function renderPlayground(businessId) {
     injectPlaygroundStyles();
     const contentArea = document.getElementById('content-area');
     

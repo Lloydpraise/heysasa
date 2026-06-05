@@ -1,64 +1,5 @@
-// ─── Analytics data ───────────────────────────────────────────────────────────
-let analyticsData = {
-    funnel: [
-        { stage: 'Total contacts',    count: 6  },
-        { stage: 'Business leads',    count: 5  },
-        { stage: 'Replied',           count: 4  },
-        { stage: 'Showed interest',   count: 4  },
-        { stage: 'Converted',         count: 1  },
-    ],
-    stateBreakdown: [
-        { state: 'engaged',  count: 1, label: 'Engaged' },
-        { state: 'new',      count: 2, label: 'New' },
-        { state: 'stalled',  count: 1, label: 'Going cold' },
-        { state: 'ghosted',  count: 1, label: 'Ghosted' },
-        { state: 'won',      count: 1, label: 'Won' },
-    ],
-    adLeaderboard: [
-        {
-            ad_id: 'fb_ad_001', platform: 'facebook',
-            headline: 'Power Your Home 24/7 — Solar Backup Systems',
-            body: 'Never lose power again. Our 5kW inverter keeps you running.',
-            thumbnail: 'https://placehold.co/56x56/28A745/ffffff?text=AD',
-            lead_count: 4, reply_count: 3, product_interest_count: 3, conversion_count: 1, quality_score: 58,
-        },
-        {
-            ad_id: 'ig_ad_002', platform: 'instagram',
-            headline: 'Rent Furnished Apartments in Westlands',
-            body: '1, 2 & 3 bedroom fully furnished. From KES 45,000/month.',
-            thumbnail: 'https://placehold.co/56x56/94A3B8/ffffff?text=AD',
-            lead_count: 1, reply_count: 1, product_interest_count: 1, conversion_count: 0, quality_score: 36,
-        },
-    ],
-    productDemand: [
-        { label: 'Solar energy',       count: 4 },
-        { label: 'Real estate',        count: 1 },
-        { label: 'Financial services', count: 1 },
-    ],
-    convHealth: {
-        avg_reply_time_min: 12,
-        pct_never_replied:  17,
-        pct_gone_cold:      20,
-        pct_ai_managed:     60,
-        open_unread:         2,
-        opt_out_count:       0,
-    },
-    heatmap: (() => {
-        const g = Array.from({ length: 7 }, () => Array(24).fill(0));
-        const peaks = [
-            [0,9,3],[0,10,4],[0,14,2],[1,9,3],[1,20,4],[1,21,3],
-            [2,8,2],[2,10,4],[2,19,3],[3,10,3],[3,11,3],[4,9,4],
-            [4,16,3],[5,11,4],[5,20,5],[5,21,4],[6,10,3],[6,14,4],[6,20,5],
-        ];
-        peaks.forEach(([d,h,v]) => { g[d][h] = v; });
-        return g;
-    })(),
-    weeklyTrend: [
-        { week: 'W1', new: 0 }, { week: 'W2', new: 1 }, { week: 'W3', new: 0 },
-        { week: 'W4', new: 2 }, { week: 'W5', new: 1 }, { week: 'W6', new: 0 },
-        { week: 'W7', new: 1 }, { week: 'W8', new: 3 },
-    ],
-};
+// ─── Analytics data — populated entirely from analyticsService, no mock values ──
+let analyticsData = null;
 
 let activeAnSection = 'overview';
 
@@ -171,6 +112,18 @@ function injectAnalyticsStyles() {
         .data-table { width:100%; border-collapse:collapse; }
         .data-table th { text-align:left; padding:12px; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:#94A3B8; border-bottom:1px solid rgba(15,23,42,0.05); }
         .data-table td { padding:16px 12px; border-bottom:1px solid rgba(15,23,42,0.05); font-size:13px; color:#0F172A; font-weight:500; }
+
+        /* Loading & Error States */
+        .an-loading { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; gap:16px; padding:48px; }
+        .an-spinner { width:32px; height:32px; border:3px solid rgba(40,167,69,0.15); border-top-color:#28A745; border-radius:50%; animation:an-spin 0.7s linear infinite; }
+        @keyframes an-spin { to { transform:rotate(360deg); } }
+        .an-loading-text { font-size:13px; font-weight:600; color:#64748B; }
+        .an-error { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; gap:12px; padding:48px; text-align:center; }
+        .an-error-icon { font-size:32px; }
+        .an-error-title { font-size:15px; font-weight:700; color:#0F172A; }
+        .an-error-sub { font-size:13px; color:#64748B; max-width:280px; line-height:1.5; }
+        .an-retry-btn { margin-top:8px; padding:10px 20px; border-radius:10px; background:#28A745; color:#fff; font-size:13px; font-weight:700; border:none; cursor:pointer; transition:opacity 0.2s; }
+        .an-retry-btn:hover { opacity:0.85; }
     `;
     document.head.appendChild(s);
 }
@@ -204,11 +157,10 @@ window.closeDrawer = function() {
 // ─── Sections ─────────────────────────────────────────────────────────────────
 
 function renderOverview() {
-    const f = analyticsData.funnel;
+    const f   = analyticsData.funnel;
     const top = f[0].count;
     const cvr = pct(f[4].count, f[1].count);
     const rr  = pct(f[2].count, f[1].count);
-    const cold = analyticsData.stateBreakdown.find(s=>s.state==='stalled').count;
 
     const opacities = [1, 0.85, 0.7, 0.55, 0.4];
     const funnelRows = f.map((row, i) => {
@@ -221,10 +173,10 @@ function renderOverview() {
         </div>`;
     }).join('');
 
-    const maxTrend = Math.max(...analyticsData.weeklyTrend.map(w=>w.new), 1);
+    const maxTrend = Math.max(...analyticsData.weeklyTrend.map(w => w.new), 1);
     const trendHTML = analyticsData.weeklyTrend.map(w => `
         <div class="trend-col">
-            <div class="trend-bar-wrap"><div class="trend-bar" style="height:${pct(w.new, maxTrend)}%; opacity:${w.new===0?0:1}"></div></div>
+            <div class="trend-bar-wrap"><div class="trend-bar" style="height:${pct(w.new, maxTrend)}%; opacity:${w.new === 0 ? 0 : 1}"></div></div>
             <div class="trend-lbl">${w.week}</div>
         </div>
     `).join('');
@@ -237,12 +189,12 @@ function renderOverview() {
                 <div class="hero-sub">From ${f[0].count} total contacts. Click to view pipeline details.</div>
             </div>
             <div class="glass-box">
-                <div class="hero-lbl"><span class="status-dot ${rr>=70?'green':'amber'}"></span> Reply Rate</div>
+                <div class="hero-lbl"><span class="status-dot ${rr >= 70 ? 'green' : 'amber'}"></span> Reply Rate</div>
                 <div class="hero-num">${rr}%</div>
                 <div class="hero-sub">${f[2].count} leads actively engaged.</div>
             </div>
             <div class="glass-box">
-                <div class="hero-lbl"><span class="status-dot ${cvr>=20?'green':'amber'}"></span> Conversion</div>
+                <div class="hero-lbl"><span class="status-dot ${cvr >= 20 ? 'green' : 'amber'}"></span> Conversion</div>
                 <div class="hero-num">${cvr}%</div>
                 <div class="hero-sub">${f[4].count} successfully closed.</div>
             </div>
@@ -268,8 +220,8 @@ function renderOverview() {
 }
 
 function renderAds() {
-    const ads = analyticsData.adLeaderboard;
-    const best = ads[0];
+    const ads  = analyticsData.adLeaderboard;
+    const best = ads[0] || { quality_score: 0 };
 
     const adItems = ads.map(ad => `
         <div class="ad-item" onclick="openDrawer('Ad Performance: ${ad.ad_id}', generateAdDetails('${ad.ad_id}'))">
@@ -286,16 +238,18 @@ function renderAds() {
         </div>
     `).join('');
 
+    const noAdsHTML = `<div style="text-align:center; padding:32px; color:#94A3B8; font-size:13px; font-weight:500;">No ad data recorded yet.</div>`;
+
     return `
         <div class="grid-cards">
             <div class="glass-box interactive" onclick="openDrawer('All Ad Campaigns', generateAllAdsTable())">
                 <div class="hero-lbl"><span class="status-dot green"></span> Active Ads</div>
                 <div class="hero-num">${ads.length}</div>
-                <div class="hero-sub">Generating a total of ${ads.reduce((s,a)=>s+a.lead_count,0)} leads. Click to view table.</div>
+                <div class="hero-sub">Generating a total of ${ads.reduce((s, a) => s + a.lead_count, 0)} leads. Click to view table.</div>
             </div>
             <div class="glass-box">
                 <div class="hero-lbl"><span class="status-dot green"></span> Top Quality Score</div>
-                <div class="hero-num">${best.quality_score}</div>
+                <div class="hero-num">${Math.round(best.quality_score)}</div>
                 <div class="hero-sub">Best performing campaign metric.</div>
             </div>
         </div>
@@ -304,19 +258,19 @@ function renderAds() {
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"></path></svg>
                 Leaderboard ${infoIcon("Click any ad to see a deep dive of its performance funnel.")}
             </div>
-            ${adItems}
+            ${ads.length > 0 ? adItems : noAdsHTML}
         </div>
     `;
 }
 
 function renderProducts() {
     const products = analyticsData.productDemand;
-    const maxP = Math.max(...products.map(p=>p.count),1);
-    
-    const bars = products.map((p,i) => `
+    const maxP     = Math.max(...products.map(p => p.count), 1);
+
+    const bars = products.map((p, i) => `
         <div class="bar-row">
             <div class="bar-label">${p.label}</div>
-            <div class="bar-outer"><div class="bar-inner" style="width:${pct(p.count,maxP)}%; background:rgba(40,167,69,${1 - (i*0.15)})"><span class="bar-val">${p.count}</span></div></div>
+            <div class="bar-outer"><div class="bar-inner" style="width:${pct(p.count, maxP)}%; background:rgba(40,167,69,${1 - (i * 0.15)})"><span class="bar-val">${p.count}</span></div></div>
         </div>
     `).join('');
 
@@ -332,12 +286,16 @@ function renderProducts() {
 }
 
 function renderTiming() {
-    const hm = analyticsData.heatmap;
-    const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const hm   = analyticsData.heatmap;
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const maxV = Math.max(...hm.flat(), 1);
 
-    const xLabels = `<div></div>` + Array.from({length:24},(_,h) => h%4===0 ? `<div class="hm-lbl-x">${h}:00</div>` : `<div></div>`).join('');
-    
+    const xLabels = `<div></div>` + Array.from({ length: 24 }, (_, h) =>
+        h % 4 === 0
+            ? `<div class="hm-lbl-x">${h}:00</div>`
+            : `<div></div>`
+    ).join('');
+
     const rows = hm.map((row, d) => `
         <div class="hm-lbl-y">${days[d]}</div>
         ${row.map(v => `<div class="hm-cell" style="background:${getOpacityColor(v, maxV)}" title="${v} interactions"></div>`).join('')}
@@ -357,7 +315,7 @@ function renderTiming() {
             </div>
             <div class="hm-legend">
                 <span>Quiet</span>
-                ${['rgba(40,167,69,0.05)','rgba(40,167,69,0.25)','rgba(40,167,69,0.5)','rgba(40,167,69,0.8)','rgba(40,167,69,1)'].map(c=>`<div style="width:16px;height:12px;border-radius:3px;background:${c}"></div>`).join('')}
+                ${['rgba(40,167,69,0.05)', 'rgba(40,167,69,0.25)', 'rgba(40,167,69,0.5)', 'rgba(40,167,69,0.8)', 'rgba(40,167,69,1)'].map(c => `<div style="width:16px;height:12px;border-radius:3px;background:${c}"></div>`).join('')}
                 <span>Busy</span>
             </div>
         </div>
@@ -366,26 +324,26 @@ function renderTiming() {
 
 function renderHealth() {
     const h = analyticsData.convHealth;
-    
+
     return `
         <div class="grid-cards">
             <div class="glass-box interactive" onclick="openDrawer('Health Breakdown', generateHealthDetails())">
-                <div class="hero-lbl"><span class="status-dot ${h.avg_reply_time_min<=15?'green':'amber'}"></span> Avg Reply Time</div>
+                <div class="hero-lbl"><span class="status-dot ${h.avg_reply_time_min <= 15 ? 'green' : 'amber'}"></span> Avg Reply Time</div>
                 <div class="hero-num">${h.avg_reply_time_min}m</div>
                 <div class="hero-sub">Target is < 15m. Click to view detailed health breakdown.</div>
             </div>
             <div class="glass-box">
-                <div class="hero-lbl"><span class="status-dot ${h.open_unread===0?'green':'red'}"></span> Unread Pending</div>
+                <div class="hero-lbl"><span class="status-dot ${h.open_unread === 0 ? 'green' : 'red'}"></span> Unread Pending</div>
                 <div class="hero-num">${h.open_unread}</div>
                 <div class="hero-sub">Leads awaiting your response right now.</div>
             </div>
             <div class="glass-box">
-                <div class="hero-lbl"><span class="status-dot ${h.pct_ai_managed>=50?'green':'amber'}"></span> AI Handled</div>
+                <div class="hero-lbl"><span class="status-dot ${h.pct_ai_managed >= 50 ? 'green' : 'amber'}"></span> AI Handled</div>
                 <div class="hero-num">${h.pct_ai_managed}%</div>
                 <div class="hero-sub">Conversations fully resolved by AI.</div>
             </div>
             <div class="glass-box">
-                <div class="hero-lbl"><span class="status-dot ${h.pct_gone_cold<=15?'green':'amber'}"></span> Stalled Pipeline</div>
+                <div class="hero-lbl"><span class="status-dot ${h.pct_gone_cold <= 15 ? 'green' : 'amber'}"></span> Stalled Pipeline</div>
                 <div class="hero-num">${h.pct_gone_cold}%</div>
                 <div class="hero-sub">Leads requiring automated follow-up.</div>
             </div>
@@ -397,8 +355,8 @@ function renderHealth() {
 
 function generateFunnelDetails() {
     const states = analyticsData.stateBreakdown;
-    const total = states.reduce((s,x)=>s+x.count, 0);
-    const rows = states.map(s => `
+    const total  = states.reduce((s, x) => s + x.count, 0);
+    const rows   = states.map(s => `
         <tr>
             <td>${s.label}</td>
             <td>${s.count}</td>
@@ -433,11 +391,11 @@ function generateAllAdsTable() {
 
 function generateAdDetails(adId) {
     const ad = analyticsData.adLeaderboard.find(a => a.ad_id === adId);
+    if (!ad) return `<p style="color:#64748B; font-size:13px;">Ad not found.</p>`;
     return `
         <img src="${ad.thumbnail}" style="width:100%; height:200px; object-fit:cover; border-radius:12px; margin-bottom:20px;">
         <h3 style="font-size:16px; font-weight:700; color:#0F172A; margin-bottom:8px;">${ad.headline}</h3>
         <p style="font-size:13px; color:#64748B; margin-bottom:24px;">${ad.body}</p>
-        
         <table class="data-table">
             <tbody>
                 <tr><td>Platform</td><td>${ad.platform}</td></tr>
@@ -455,9 +413,9 @@ function generateHealthDetails() {
     return `
         <table class="data-table">
             <tbody>
-                <tr><td>Never Replied Rate</td><td><span class="status-dot ${h.pct_never_replied<=20?'green':'red'}"></span> ${h.pct_never_replied}%</td></tr>
-                <tr><td>Pipeline Cold Rate</td><td><span class="status-dot ${h.pct_gone_cold<=15?'green':'amber'}"></span> ${h.pct_gone_cold}%</td></tr>
-                <tr><td>Opt-Outs</td><td><span class="status-dot ${h.opt_out_count===0?'green':'red'}"></span> ${h.opt_out_count}</td></tr>
+                <tr><td>Never Replied Rate</td><td><span class="status-dot ${h.pct_never_replied <= 20 ? 'green' : 'red'}"></span> ${h.pct_never_replied}%</td></tr>
+                <tr><td>Pipeline Cold Rate</td><td><span class="status-dot ${h.pct_gone_cold <= 15 ? 'green' : 'amber'}"></span> ${h.pct_gone_cold}%</td></tr>
+                <tr><td>Opt-Outs</td><td><span class="status-dot ${h.opt_out_count === 0 ? 'green' : 'red'}"></span> ${h.opt_out_count}</td></tr>
             </tbody>
         </table>
         <p style="font-size:12px; color:#64748B; margin-top:24px; padding:12px; background:rgba(15,23,42,0.03); border-radius:8px;">
@@ -466,14 +424,14 @@ function generateHealthDetails() {
     `;
 }
 
-// ─── Navigation & Initialization ──────────────────────────────────────────────
+// ─── Navigation & Section Routing ────────────────────────────────────────────
 
 const AN_SECTIONS = [
-    { id: 'overview',  label: 'Overview', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>' },
-    { id: 'ads',       label: 'Ad Impact', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"></path>' },
-    { id: 'products',  label: 'Demand', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>' },
-    { id: 'timing',    label: 'Timing', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>' },
-    { id: 'health',    label: 'Health', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>' },
+    { id: 'overview', label: 'Overview',  icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>' },
+    { id: 'ads',      label: 'Ad Impact', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"></path>' },
+    { id: 'products', label: 'Demand',    icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>' },
+    { id: 'timing',   label: 'Timing',    icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>' },
+    { id: 'health',   label: 'Health',    icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>' },
 ];
 
 window.setAnalyticsSection = function(id) {
@@ -486,46 +444,54 @@ window.setAnalyticsSection = function(id) {
 
 function buildNav() {
     return AN_SECTIONS.map(s => `
-        <button class="an-tab ${activeAnSection===s.id?'active':''}" onclick="setAnalyticsSection('${s.id}')">
+        <button class="an-tab ${activeAnSection === s.id ? 'active' : ''}" onclick="setAnalyticsSection('${s.id}')">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">${s.icon}</svg> ${s.label}
         </button>`).join('');
 }
 
 function buildSection() {
-    switch(activeAnSection) {
-        case 'overview': return renderOverview();
-        case 'ads':      return renderAds();
-        case 'products': return renderProducts();
-        case 'timing':   return renderTiming();
-        case 'health':   return renderHealth();
-        default:         return renderOverview();
+    switch (activeAnSection) {
+        case 'overview':  return renderOverview();
+        case 'ads':       return renderAds();
+        case 'products':  return renderProducts();
+        case 'timing':    return renderTiming();
+        case 'health':    return renderHealth();
+        default:          return renderOverview();
     }
 }
 
-// ─── Main render ──────────────────────────────────────────────────────────────
-async function renderAnalyticsContent() {
-    injectAnalyticsStyles();
-    const contentArea = document.getElementById('content-area');
+// ─── Loading & Error state helpers ────────────────────────────────────────────
 
-    // Pull active context token and fetch real database rows before printing charts
-    const businessId = window.getActiveBusinessId();
-    if (businessId && window.analyticsService) {
-        const liveData = await window.analyticsService.getDashboardMetrics(businessId);
-        if (liveData) {
-            analyticsData = liveData;
-            console.log("[Analytics UI] Live database summaries mounted successfully.");
-        }
-    }
+function renderLoadingShell(contentArea) {
+    contentArea.innerHTML = `
+        <div class="an-wrap">
+            <div class="an-loading">
+                <div class="an-spinner"></div>
+                <div class="an-loading-text">Loading analytics…</div>
+            </div>
+        </div>
+    `;
+}
 
-    contentArea.classList.remove('items-center','justify-center','p-4','overflow-y-auto');
-    contentArea.classList.add('overflow-hidden');
-    contentArea.style.padding = '0';
+function renderErrorShell(contentArea, businessId) {
+    contentArea.innerHTML = `
+        <div class="an-wrap">
+            <div class="an-error">
+                <div class="an-error-icon">📡</div>
+                <div class="an-error-title">Couldn't load analytics</div>
+                <div class="an-error-sub">There was a problem fetching your data. Check your connection and try again.</div>
+                <button class="an-retry-btn" onclick="renderAnalyticsContent()">Retry</button>
+            </div>
+        </div>
+    `;
+}
 
+function mountFullDashboard(contentArea) {
     contentArea.innerHTML = `
         <div class="an-wrap">
             <div class="an-topnav" id="an-nav">${buildNav()}</div>
             <div class="an-content" id="an-body">${buildSection()}</div>
-            
+
             <div id="an-drawer-overlay" class="an-drawer-overlay" onclick="closeDrawer()"></div>
             <div id="an-drawer-panel" class="an-drawer-panel">
                 <div class="an-drawer-header">
@@ -538,11 +504,57 @@ async function renderAnalyticsContent() {
     `;
 }
 
+// ─── Main render ──────────────────────────────────────────────────────────────
+async function renderAnalyticsContent(businessId) {
+    injectAnalyticsStyles();
+    const contentArea = document.getElementById('content-area');
+
+    contentArea.classList.remove('items-center', 'justify-center', 'p-4', 'overflow-y-auto');
+    contentArea.classList.add('overflow-hidden');
+    contentArea.style.padding = '0';
+
+    // Show spinner while fetching
+    renderLoadingShell(contentArea);
+
+    const activeId = businessId || window.getActiveBusinessId();
+    if (!activeId) {
+        console.warn("[Analytics] No active business ID — cannot fetch metrics.");
+        renderErrorShell(contentArea);
+        return;
+    }
+
+    if (!window.analyticsService) {
+        console.error("[Analytics] analyticsService not found. Ensure analytics-service.js is loaded first.");
+        renderErrorShell(contentArea);
+        return;
+    }
+
+    const liveData = await window.analyticsService.getDashboardMetrics(activeId);
+
+    if (!liveData) {
+        console.error("[Analytics] getDashboardMetrics returned null.");
+        renderErrorShell(contentArea);
+        return;
+    }
+
+    analyticsData = liveData;
+    console.log("[Analytics UI] Live database summaries mounted successfully.");
+
+    mountFullDashboard(contentArea);
+}
+
 if (typeof PAGE_CONFIG !== 'undefined') {
     PAGE_CONFIG.analytics = {
         title:       'Analytics',
         description: 'Business intelligence from your conversations.',
         navId:       'nav-analytics',
-        render:      renderAnalyticsContent
+        render: function(passedBusinessId) {
+            const activeId = passedBusinessId || localStorage.getItem('business_id');
+            if (activeId) {
+                renderAnalyticsContent(activeId);
+            } else {
+                console.error('[Analytics Error] No business ID available.');
+            }
+        }
     };
 }

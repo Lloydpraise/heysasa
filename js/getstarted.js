@@ -1,362 +1,414 @@
-// ==========================================
-// CONFIGURATION & STATE
-// ==========================================
-let currentBusinessId = null;
-let currentInstanceName = null;
-let checkConnectionInterval = null;
-let currentEmail = '';
-let targetWebsiteUrl = ''; 
+/**
+ * get-started.js — HeySasa! New User Onboarding
+ *
+ * Flow:
+ *   Step 1 (url)      → validate website URL
+ *   Step 2 (login)    → register email + password → signUp → send OTP
+ *   Step 3 (otp)      → verify OTP → mark email confirmed
+ *   Step 4 (whatsapp) → call onboarding edge function → show QR → poll connection
+ *
+ * OTP is ONLY sent during new account registration here.
+ * Returning users go through login.js instead.
+ *
+ * localStorage contract (matches dashboard.html boot sequence):
+ *   business_id   — short business identifier
+ *   session_id    — Supabase session access token
+ *   user_email    — for profile.js display
+ */
 
-const screens = {
-    url: document.getElementById('step-url'),
-    login: document.getElementById('step-login'),
-    otp: document.getElementById('step-otp'),
-    whatsapp: document.getElementById('step-whatsapp')
-};
+(function () {
+    'use strict';
 
-const otpBoxes = document.querySelectorAll('.otp-box');
+    // ─── State ─────────────────────────────────────────────────────────────────
+    let currentEmail       = '';
+    let targetWebsiteUrl   = '';
+    let currentBusinessId  = null;
+    let currentInstanceName = null;
+    let connectionPollTimer = null;
 
-// ==========================================
-// UI & PROGRESS LOGIC
-// ==========================================
-function goToStep(stepId) {
-    const target = typeof stepId === 'number' ? document.getElementById('step-' + stepId) : screens[stepId];
-    
-    document.querySelectorAll('.step-content').forEach(s => s.classList.remove('active'));
-    if (target) target.classList.add('active');
+    // ─── DOM ───────────────────────────────────────────────────────────────────
+    const screens = {
+        url:      document.getElementById('step-url'),
+        login:    document.getElementById('step-login'),
+        otp:      document.getElementById('step-otp'),
+        whatsapp: document.getElementById('step-whatsapp'),
+    };
+    const otpBoxes = document.querySelectorAll('.otp-box');
 
-    const container = document.getElementById('main-container');
-    if (container) {
-        if (stepId === 'whatsapp' || stepId === 2) {
-            container.classList.replace('max-w-md', 'max-w-5xl');
-        } else {
-            container.classList.replace('max-w-5xl', 'max-w-md');
+    // ─── Navigation ────────────────────────────────────────────────────────────
+    function goToStep(key) {
+        Object.values(screens).forEach(s => s?.classList.remove('active'));
+        screens[key]?.classList.add('active');
+
+        const container = document.getElementById('main-container');
+        if (container) {
+            if (key === 'whatsapp') {
+                container.classList.replace('max-w-md', 'max-w-5xl');
+            } else {
+                container.classList.replace('max-w-5xl', 'max-w-md');
+            }
         }
     }
-}
 
-function updateProgress(percentage, text) {
-    const progressBar = document.getElementById('progress-bar');
-    const statusText = document.getElementById('status-text');
-    
-    if (progressBar) progressBar.style.width = percentage + '%';
-    if (statusText) statusText.textContent = text;
-}
-
-function notify(msg, err = true) {
-    const t = document.getElementById('toast');
-    const msgEl = document.getElementById('toast-message');
-    if (!t || !msgEl) return;
-
-    msgEl.textContent = msg;
-    t.style.backgroundColor = err ? '#ef4444' : '#28A745';
-    t.classList.remove('translate-y-[-150%]');
-    setTimeout(() => t.classList.add('translate-y-[-150%]'), 4000);
-}
-
-// ==========================================
-// PASSWORD STRENGTH VISUAL LOGIC
-// ==========================================
-const passwordInput = document.getElementById('password');
-if (passwordInput) {
-    passwordInput.addEventListener('input', () => {
-        const val = passwordInput.value;
-        
-        // Rules definitions
-        const hasLength = val.length >= 8;
-        const hasNumber = /\D*/.test(val) && /[0-9]/.test(val);
-        const hasSpecial = /[^A-Za-z0-9]/.test(val);
-
-        // UI Adjustments
-        toggleRuleVisual('req-length', hasLength);
-        toggleRuleVisual('req-number', hasNumber);
-        toggleRuleVisual('req-special', hasSpecial);
-    });
-}
-
-function toggleRuleVisual(elementId, isValid) {
-    const el = document.getElementById(elementId);
-    if (el) {
-        if (isValid) {
-            el.classList.add('valid');
-        } else {
-            el.classList.remove('valid');
-        }
-    }
-}
-
-// ==========================================
-// AUTHENTICATION FLOW HANDLERS
-// ==========================================
-
-// STEP 1: URL Submission
-document.getElementById('url-form').onsubmit = (e) => {
-    e.preventDefault();
-    let url = document.getElementById('client-url').value.trim();
-    
-    let urlForValidation = url;
-    if (!urlForValidation.startsWith('http://') && !urlForValidation.startsWith('https://')) {
-        urlForValidation = 'https://' + urlForValidation;
-    }
-    
-    try {
-        new URL(urlForValidation);
-        targetWebsiteUrl = urlForValidation;
-        goToStep('login');
-    } catch (err) {
-        notify('Invalid URL. Please enter a valid URL (e.g., yourbusiness.com)');
-    }
-};
-
-// STEP 2: Login / Sign Up Submission
-document.getElementById('login-form').onsubmit = async (e) => {
-    e.preventDefault();
-    currentEmail = document.getElementById('email').value.trim();
-    const password = passwordInput.value;
-    const btn = document.getElementById('btn-login');
-
-    // Pre-flight check
-    if (password.length < 8 || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
-        return notify("Please complete all password security strength requirements.");
+    function updateProgress(pct, text) {
+        const bar  = document.getElementById('progress-bar');
+        const label = document.getElementById('status-text');
+        if (bar)   bar.style.width = pct + '%';
+        if (label) label.textContent = text;
     }
 
-    btn.innerText = "Creating account...";
-    btn.disabled = true;
-
-    // Register user session with Supabase
-    const signUpRes = await authManager.signUpWithPassword(currentEmail, password);
-    
-    if (!signUpRes.success) {
-        notify("Could not create account: " + signUpRes.error.message);
-        btn.innerText = "Create Account";
-        btn.disabled = false;
-        console.error('Sign up error:', signUpRes.error);
-        return;
+    function notify(msg, isError = true) {
+        const toast   = document.getElementById('toast');
+        const msgEl   = document.getElementById('toast-message');
+        if (!toast || !msgEl) return;
+        msgEl.textContent = msg;
+        toast.style.backgroundColor = isError ? '#ef4444' : '#28A745';
+        toast.classList.remove('translate-y-[-150%]');
+        setTimeout(() => toast.classList.add('translate-y-[-150%]'), 4000);
     }
 
-    btn.innerText = "Sending Code...";
-
-    // Fire verification token setup
-    const otpRes = await authManager.signInWithOtp(currentEmail);
-    
-    if (!otpRes.success) {
-        notify("Account registered, but could not deliver verification token: " + otpRes.error.message);
-        btn.innerText = "Create Account";
-        btn.disabled = false;
-        console.error('OTP error:', otpRes.error);
-    } else {
-        document.getElementById('display-email').textContent = currentEmail;
-        goToStep('otp');
-        notify("We've sent a 6-digit verification code to your email!", false);
-        btn.innerText = "Create Account";
-        btn.disabled = false;
-    }
-};
-
-// STEP 3: OTP Verification
-document.getElementById('otp-form').onsubmit = async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('btn-verify');
-    let token = '';
-    otpBoxes.forEach(b => token += b.value);
-
-    if (token.length < 6) return notify("Please enter the full 6-digit code");
-
-    btn.innerText = "Verifying...";
-    btn.disabled = true;
-
-    const res = await authManager.verifyOtp(currentEmail, token, 'email');
-    
-    if (res.success) {
-        notify("Identity verified successfully!", false);
-        
-        const password = passwordInput.value;
-        const saveRes = await authManager.savePasswordToBackend(currentEmail, password);
-        
-        if (!saveRes.success) {
-            console.warn('Password vault tracking notice:', saveRes.error);
-        } else {
-            console.log('Credentials saved securely.');
-        }
-        
-        // Seamless handoff to trigger browser credential autofill profile capture
-        setTimeout(() => {
-            startOnboarding(targetWebsiteUrl);
-        }, 500);
-    } else {
-        console.error('OTP Verification Failed:', res.error);
-        notify("Invalid or expired setup code. Please try again.");
-        btn.innerText = "Verify & Continue";
-        btn.disabled = false;
-        otpBoxes.forEach(b => b.value = '');
-        otpBoxes[0].focus();
-    }
-};
-
-// OTP Navigation Controls & Behaviors
-otpBoxes.forEach((box, i) => {
-    box.addEventListener('input', (e) => {
-        // Strip non-numeric inputs
-        box.value = box.value.replace(/\D/g, '');
-        if (box.value && i < 5) otpBoxes[i + 1].focus();
-        
-        checkAndAutoVerify();
-    });
-
-    box.addEventListener('keydown', (e) => {
-        if (e.key === 'Backspace' && !box.value && i > 0) {
-            otpBoxes[i - 1].focus();
-        }
-    });
-
-    if (i === 0) {
-        box.addEventListener('paste', (e) => {
-            e.preventDefault();
-            const pastedText = (e.clipboardData || window.clipboardData).getData('text');
-            const digits = pastedText.replace(/\D/g, '').slice(0, 6);
-            
-            digits.split('').forEach((digit, index) => {
-                if (index < 6) {
-                    otpBoxes[index].value = digit;
-                }
-            });
-            
-            const nextEmptyIndex = digits.length < 6 ? digits.length : 5;
-            otpBoxes[nextEmptyIndex].focus();
-            
-            checkAndAutoVerify();
-        });
-    }
-});
-
-function checkAndAutoVerify() {
-    let allFilled = true;
-    let token = '';
-    otpBoxes.forEach(b => {
-        if (!b.value) allFilled = false;
-        token += b.value;
-    });
-    
-    if (allFilled && token.length === 6) {
-        const btn = document.getElementById('btn-verify');
-        btn.innerText = "Verifying...";
-        btn.disabled = true;
-        
-        document.getElementById('otp-form').dispatchEvent(new Event('submit'));
-    }
-}
-
-// ==========================================
-// CORE ONBOARDING PIPELINE
-// ==========================================
-async function startOnboarding(websiteUrl) {
-    try {
-        goToStep('whatsapp'); 
-        updateProgress(50, "Initializing AI Setup...");
-
-        const client = window.getSupabase();
-        if (!client) throw new Error('Supabase integration offline.');
-        
-        const { data, error } = await client.functions.invoke('onboarding-ochestrator', {
-            body: { websiteUrl: websiteUrl }
-        });
-
-        // Intercept and sanitize Edge Function platform/network issues
-        if (error) {
-            console.error("Supabase edge function error log:", error);
-            throw new Error("Our setup channels are running slowly. Let's complete synchronization inside the control dashboard.");
-        }
-
-        const sasaBusinessId = data.sasa_business_id;
-        const derivedBusinessId = data.business_id; 
-        currentInstanceName = data.instance_name;
-
-        localStorage.setItem('sb_sasa_business_id', sasaBusinessId);
-        localStorage.setItem('sb_business_id', derivedBusinessId); 
-        localStorage.setItem('sb_instance_name', currentInstanceName);
-
-        currentBusinessId = derivedBusinessId; 
-
-        const qrImg = document.querySelector('#step-whatsapp img') || document.querySelector('#step-2 img');
-        if (qrImg) qrImg.src = data.qrcode;
-        
-        updateProgress(100, "Scan to connect! (AI is learning in background)");
-        startConnectionPolling(currentInstanceName);
-
-    } catch (err) {
-        console.error("Onboarding setup failure details:", err);
-        // User-friendly fallback messaging that routes past systemic edge errors cleanly
-        notify("Account verified! We're putting on the final touches via your workspace dashboard...", false);
-        updateProgress(100, "Redirecting to tracking terminal...");
-        setTimeout(() => {
+    // ─── On load: skip to dashboard if already set up ─────────────────────────
+    window.addEventListener('DOMContentLoaded', async () => {
+        // If they already have a business + session, skip the whole flow
+        const existingBusiness = localStorage.getItem('business_id');
+        const existingSession  = localStorage.getItem('session_id');
+        if (existingBusiness && existingSession) {
             window.location.href = 'dashboard.html';
-        }, 2500);
+            return;
+        }
+
+        // Check for a live Supabase session (e.g. email link click)
+        const client = window.getSupabase?.();
+        if (client) {
+            const { data: { session } } = await client.auth.getSession();
+            if (session) {
+                // They verified email via magic link — check if business exists
+                const { data: biz } = await client
+                    .from('businesses')
+                    .select('id')
+                    .eq('user_id', session.user.id)
+                    .maybeSingle();
+
+                if (biz?.id) {
+                    // Already fully onboarded — send to dashboard
+                    localStorage.setItem('business_id', biz.id);
+                    localStorage.setItem('session_id',  session.access_token);
+                    localStorage.setItem('user_email',  session.user.email);
+                    window.location.href = 'dashboard.html';
+                    return;
+                }
+
+                // Authenticated but no business yet — resume from whatsapp step
+                currentEmail = session.user.email;
+                const instanceName = localStorage.getItem('sb_instance_name');
+                if (instanceName) {
+                    currentInstanceName = instanceName;
+                    goToStep('whatsapp');
+                    updateProgress(80, 'Resuming setup…');
+                    startConnectionPolling(instanceName);
+                    return;
+                }
+            }
+        }
+
+        // Pre-fill URL from query param if coming from marketing page
+        const urlParams = new URLSearchParams(window.location.search);
+        const passedUrl = urlParams.get('url');
+        if (passedUrl) {
+            targetWebsiteUrl = decodeURIComponent(passedUrl);
+            goToStep('login');
+        } else {
+            goToStep('url');
+        }
+    });
+
+    // ─── STEP 1: URL ───────────────────────────────────────────────────────────
+    const urlForm = document.getElementById('url-form');
+    if (urlForm) {
+        urlForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            let raw = document.getElementById('client-url')?.value.trim() || '';
+            if (!raw.startsWith('http://') && !raw.startsWith('https://')) {
+                raw = 'https://' + raw;
+            }
+            try {
+                new URL(raw);
+                targetWebsiteUrl = raw;
+                goToStep('login');
+            } catch {
+                notify('Invalid URL. Try something like: yourbusiness.com');
+            }
+        });
     }
-}
 
-// ==========================================
-// WHATSAPP CONNECTION POLLING
-// ==========================================
-function startConnectionPolling(instanceName) {
-    if (checkConnectionInterval) clearInterval(checkConnectionInterval);
+    // ─── Password strength indicator ───────────────────────────────────────────
+    const passwordInput = document.getElementById('password');
+    if (passwordInput) {
+        passwordInput.addEventListener('input', () => {
+            const v = passwordInput.value;
+            setRule('req-length',  v.length >= 8);
+            setRule('req-number',  /[0-9]/.test(v));
+            setRule('req-special', /[^A-Za-z0-9]/.test(v));
+        });
+    }
+    function setRule(id, valid) {
+        document.getElementById(id)?.classList.toggle('valid', valid);
+    }
 
-    let attempts = 0;
-    const maxAttempts = 60; 
+    // ─── STEP 2: Register ──────────────────────────────────────────────────────
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            currentEmail       = document.getElementById('email')?.value.trim() || '';
+            const password     = passwordInput?.value || '';
+            const btn          = document.getElementById('btn-login');
 
-    checkConnectionInterval = setInterval(async () => {
-        attempts++;
-        try {
-            const result = await supabaseAPI.db.fetchOneByShortId('businesses', currentBusinessId);
-
-            if (result.success && result.data.status === 'connected') {
-                clearInterval(checkConnectionInterval);
-                updateProgress(100, "WhatsApp Connected Successfully!");
-                goToStep(3); 
+            if (!currentEmail) return notify('Please enter your email.');
+            if (password.length < 8 || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+                return notify('Password must be 8+ chars with a number and a special character.');
             }
 
-            if (attempts >= maxAttempts) {
-                clearInterval(checkConnectionInterval);
-                updateProgress(100, "Scan timeout. Please refresh.");
+            if (btn) { btn.textContent = 'Creating account…'; btn.disabled = true; }
+
+            const client = window.getSupabase?.();
+            if (!client) {
+                notify('Auth service unavailable. Please refresh.');
+                if (btn) { btn.textContent = 'Create Account'; btn.disabled = false; }
+                return;
             }
-        } catch (err) {
-            console.error("Polling error:", err);
+
+            // ── Check if email already exists — redirect to login instead ─────
+            // Supabase signUp on an existing confirmed email returns a fake success
+            // (to prevent enumeration), so we try signInWithPassword first with a
+            // dummy password just to detect "Invalid credentials" vs "Email not found".
+            // Better approach: just attempt signUp and handle the duplicate case.
+            const { data: signUpData, error: signUpError } = await client.auth.signUp({
+                email:    currentEmail,
+                password: password,
+            });
+
+            if (signUpError) {
+                if (btn) { btn.textContent = 'Create Account'; btn.disabled = false; }
+
+                // Supabase doesn't expose "already registered" directly for security,
+                // but the user object will have `identities: []` if email is taken.
+                if (signUpError.message?.toLowerCase().includes('already registered')) {
+                    notify('This email already has an account. Use the Sign In page instead.');
+                } else {
+                    notify('Registration failed: ' + signUpError.message);
+                }
+                return;
+            }
+
+            // Supabase returns identities: [] when email already exists (confirmed)
+            if (signUpData?.user?.identities?.length === 0) {
+                if (btn) { btn.textContent = 'Create Account'; btn.disabled = false; }
+                notify('This email is already registered. Please sign in instead.');
+                setTimeout(() => { window.location.href = 'login.html'; }, 2000);
+                return;
+            }
+
+            // ── New user confirmed — send OTP ─────────────────────────────────
+            if (btn) btn.textContent = 'Sending code…';
+
+            const { error: otpError } = await client.auth.signInWithOtp({
+                email:   currentEmail,
+                options: { shouldCreateUser: false }, // user already created above
+            });
+
+            if (btn) { btn.textContent = 'Create Account'; btn.disabled = false; }
+
+            if (otpError) {
+                notify('Account created but could not send verification code: ' + otpError.message);
+                // Still move them to OTP step — they can use "Resend"
+            } else {
+                notify('Verification code sent to ' + currentEmail + '!', false);
+            }
+
+            const displayEmail = document.getElementById('display-email');
+            if (displayEmail) displayEmail.textContent = currentEmail;
+            goToStep('otp');
+        });
+    }
+
+    // ─── STEP 3: OTP verification ──────────────────────────────────────────────
+    otpBoxes.forEach((box, i) => {
+        box.addEventListener('input', () => {
+            box.value = box.value.replace(/\D/g, '');
+            if (box.value && i < otpBoxes.length - 1) otpBoxes[i + 1].focus();
+            checkAndAutoSubmit();
+        });
+        box.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !box.value && i > 0) otpBoxes[i - 1].focus();
+        });
+        // Paste handler on first box
+        if (i === 0) {
+            box.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const digits = (e.clipboardData || window.clipboardData)
+                    .getData('text').replace(/\D/g, '').slice(0, 6);
+                digits.split('').forEach((d, idx) => {
+                    if (otpBoxes[idx]) otpBoxes[idx].value = d;
+                });
+                const next = Math.min(digits.length, otpBoxes.length - 1);
+                otpBoxes[next].focus();
+                checkAndAutoSubmit();
+            });
         }
-    }, 2000);
-}
+    });
 
-// ==========================================
-// INITIALIZATION
-// ==========================================
-window.onload = async () => {
-    currentBusinessId = localStorage.getItem('sb_business_id');
-    currentInstanceName = localStorage.getItem('sb_instance_name');
-
-    const client = window.getSupabase();
-    let hasSession = false;
-    
-    if (client) {
-        const { data: { session } } = await client.auth.getSession();
-        if (session) {
-            hasSession = true;
-            currentEmail = session.user.email;
+    function checkAndAutoSubmit() {
+        let token = '';
+        otpBoxes.forEach(b => { token += b.value; });
+        if (token.length === 6) {
+            document.getElementById('otp-form')?.dispatchEvent(new Event('submit'));
         }
     }
 
-    if (hasSession && currentBusinessId) {
-        console.log("Session verified. Resuming profile tracking for business:", currentBusinessId);
+    const otpForm = document.getElementById('otp-form');
+    if (otpForm) {
+        otpForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-verify');
+            let token = '';
+            otpBoxes.forEach(b => { token += b.value; });
+            if (token.length < 6) return notify('Please enter the full 6-digit code.');
+
+            if (btn) { btn.textContent = 'Verifying…'; btn.disabled = true; }
+
+            const client = window.getSupabase?.();
+            const { data, error } = await client.auth.verifyOtp({
+                email: currentEmail,
+                token,
+                type: 'email',
+            });
+
+            if (error) {
+                if (btn) { btn.textContent = 'Verify & Continue'; btn.disabled = false; }
+                otpBoxes.forEach(b => { b.value = ''; });
+                otpBoxes[0].focus();
+                notify('Invalid or expired code. Please try again.');
+                return;
+            }
+
+            // Persist session token so dashboard boot can verify
+            if (data?.session) {
+                localStorage.setItem('session_id', data.session.access_token);
+                localStorage.setItem('user_email', currentEmail);
+            }
+
+            notify('Identity verified!', false);
+            // Small delay so the user sees the success message
+            setTimeout(() => startOnboarding(targetWebsiteUrl), 600);
+        });
+    }
+
+    // ─── Resend OTP ────────────────────────────────────────────────────────────
+    window.resendOtp = async function () {
+        const client = window.getSupabase?.();
+        if (!client || !currentEmail) return;
+        const { error } = await client.auth.signInWithOtp({
+            email:   currentEmail,
+            options: { shouldCreateUser: false },
+        });
+        notify(error ? 'Could not resend: ' + error.message : 'New code sent!', !!error);
+    };
+
+    // ─── STEP 4: poll for onboarded client get business_id ─────────────────────────────────────
+    async function startOnboarding(websiteUrl) {
         goToStep('whatsapp');
-        updateProgress(100, "Checking connection status...");
-        startConnectionPolling(currentInstanceName);
-        return;
+        updateProgress(30, 'Fetching your business profile…');
+
+        const client = window.getSupabase?.();
+        if (!client) {
+            notify('Service unavailable. Please refresh.');
+            return;
+        }
+
+        try {
+            // Get current user session to pull the auto-created business row
+            const { data: { user } } = await client.auth.getUser();
+            if (!user) throw new Error('User session not found.');
+
+            const { data: biz, error: bizError } = await client
+                .from('businesses')
+                .select('id')
+                .eq('user_id', user.id)
+                .maybeSingle();
+
+            if (bizError || !biz?.id) {
+                throw new Error('Business profile creation pending. Please refresh or try again.');
+            }
+
+            const businessId   = biz.id;
+            const instanceName = `heysasa_${businessId}`;
+
+            // ── Save everything to localStorage ──────────────────────────────
+            localStorage.setItem('business_id',       businessId);
+            localStorage.setItem('sb_instance_name',  instanceName);
+
+            currentBusinessId   = businessId;
+            currentInstanceName = instanceName;
+
+            updateProgress(50, 'Initializing AI setup…');
+
+            // Invoke the orchestrator, passing the existing business ID along
+            const { data, error } = await client.functions.invoke('onboarding-ochestrator', {
+                body: { businessId, websiteUrl },
+            });
+
+            if (error) throw new Error(error.message || 'Edge function error');
+
+            // Show QR code
+            const qrImg = document.querySelector('#step-whatsapp img');
+            if (qrImg && data.qrcode) qrImg.src = data.qrcode;
+
+            updateProgress(80, 'Scan the QR code to connect WhatsApp');
+            startConnectionPolling(instanceName);
+
+        } catch (err) {
+            console.error('[get-started] Onboarding error:', err);
+            notify('Setup running in background — taking you to your dashboard.', false);
+            updateProgress(100, 'Redirecting…');
+            setTimeout(() => { window.location.href = 'dashboard.html'; }, 2500);
+        }
     }
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const passedUrl = urlParams.get('url');
-    
-    if (passedUrl) {
-        targetWebsiteUrl = decodeURIComponent(passedUrl);
-        goToStep('login');
-    } else {
-        goToStep('url');
+    // ─── Poll for WhatsApp connection ──────────────────────────────────────────
+    function startConnectionPolling(instanceName) {
+        if (connectionPollTimer) clearInterval(connectionPollTimer);
+
+        let attempts = 0;
+        const MAX    = 60; // 2 min at 2s intervals
+
+        connectionPollTimer = setInterval(async () => {
+            attempts++;
+            try {
+                const client = window.getSupabase?.();
+                if (!client) return;
+
+                const { data, error } = await client
+                    .from('businesses')
+                    .select('status')
+                    .eq('id', currentBusinessId)
+                    .maybeSingle();
+
+                if (!error && data?.status === 'connected') {
+                    clearInterval(connectionPollTimer);
+                    updateProgress(100, 'WhatsApp connected!');
+                    notify('WhatsApp connected successfully!', false);
+                    setTimeout(() => { window.location.href = 'dashboard.html'; }, 1500);
+                }
+
+                if (attempts >= MAX) {
+                    clearInterval(connectionPollTimer);
+                    updateProgress(100, 'Scan timeout — you can reconnect from the dashboard.');
+                }
+            } catch (err) {
+                console.error('[get-started] Polling error:', err);
+            }
+        }, 2000);
     }
-};
+
+})();

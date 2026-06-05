@@ -1190,15 +1190,7 @@ async function renderPreferencesContent(initialSection = 'followup', businessId 
   `;
 }
 
-// ─── Register Module ──────────────────────────────────────────────────────────
-if (typeof PAGE_CONFIG !== 'undefined') {
-  PAGE_CONFIG.preferences = {
-    title:       'Preferences',
-    description: 'Manage your AI rules and business configuration.',
-    navId:       'nav-preferences',
-    render:      renderPreferencesContent
-  };
-}
+window.renderPreferences = renderPreferencesContent;
 
 // ─── Register Module ──────────────────────────────────────────────────────────
 if (typeof PAGE_CONFIG !== 'undefined') {
@@ -1206,6 +1198,13 @@ if (typeof PAGE_CONFIG !== 'undefined') {
     title:       'Preferences',
     description: 'Manage your AI rules and business configuration.',
     navId:       'nav-preferences',
-    render:      renderPreferencesContent
+    render: function(passedBusinessId) {
+      const activeId = passedBusinessId || localStorage.getItem('business_id');
+      if (activeId) {
+        renderPreferencesContent('followup', activeId);
+      } else {
+        console.error('[Preferences Error] No business ID available.');
+      }
+    }
   };
 }

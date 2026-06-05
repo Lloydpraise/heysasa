@@ -1,300 +1,260 @@
-// ─── Mock Overview & Onboarding Data ──────────────────────────────────────────
-const overviewData = {
-    businessName: "Parem Agencies",
-    creditBalance: 0,
-    whatsappConnected: false,
-    processedLeads: 0,
-    unprocessedLeads: 470,
-    contactsLocked: 45,
-    onboardingStep: 1 // 1: Credits, 2: Create AI, 3: Process Leads, 4: Follow-ups, 5: Products, 6: Done
-};
+/**
+ * dashboard-overview.js — HeySasa! Live Dashboard
+ *
+ * Registers as PAGE_CONFIG.overview ONLY when onboarding_complete is true.
+ * If the user is still in onboarding, this file loads but skips registration
+ * so onboarding.js keeps ownership of the overview slot.
+ *
+ * Load order in HTML:
+ *   <script src="onboarding.js"></script>           ← always registers first
+ *   <script src="dashboard-overview.js"></script>   ← overwrites when complete
+ *
+ * When onboarding.js calls advanceStep(6) and sets onboarding_complete = true,
+ * it then calls window.switchPage('overview') which re-reads PAGE_CONFIG.overview.
+ * At that point this module's registration (set during page load) is already in
+ * place, so the full dashboard renders immediately.
+ */
 
-// ─── Modal & Action Logic ─────────────────────────────────────────────────────
+(function () {
+    'use strict';
 
-window.openWhatsAppModal = function() {
-    const modal = document.getElementById('wa-modal');
-    const content = document.getElementById('wa-modal-content');
-    modal.classList.remove('opacity-0', 'pointer-events-none');
-    modal.classList.add('opacity-100', 'pointer-events-auto');
-    setTimeout(() => {
-        content.classList.remove('scale-95', 'translate-y-4', 'opacity-0');
-        content.classList.add('scale-100', 'translate-y-0', 'opacity-100');
-    }, 10);
-};
-
-window.closeWhatsAppModal = function() {
-    const modal = document.getElementById('wa-modal');
-    const content = document.getElementById('wa-modal-content');
-    content.classList.remove('scale-100', 'translate-y-0', 'opacity-100');
-    content.classList.add('scale-95', 'translate-y-4', 'opacity-0');
-    setTimeout(() => {
-        modal.classList.remove('opacity-100', 'pointer-events-auto');
-        modal.classList.add('opacity-0', 'pointer-events-none');
-    }, 200);
-};
-
-window.simulateWAConnect = function() {
-    overviewData.whatsappConnected = true;
-    closeWhatsAppModal();
-    setTimeout(() => {
-        renderOverviewContent();
-        showToast('WhatsApp linked successfully!');
-    }, 250);
-};
-
-window.openPaymentModal = function() {
-    const modal = document.getElementById('pay-modal');
-    const content = document.getElementById('pay-modal-content');
-    modal.classList.remove('opacity-0', 'pointer-events-none');
-    modal.classList.add('opacity-100', 'pointer-events-auto');
-    setTimeout(() => {
-        content.classList.remove('scale-95', 'translate-y-4', 'opacity-0');
-        content.classList.add('scale-100', 'translate-y-0', 'opacity-100');
-    }, 10);
-};
-
-window.closePaymentModal = function() {
-    const modal = document.getElementById('pay-modal');
-    const content = document.getElementById('pay-modal-content');
-    content.classList.remove('scale-100', 'translate-y-0', 'opacity-100');
-    content.classList.add('scale-95', 'translate-y-4', 'opacity-0');
-    setTimeout(() => {
-        modal.classList.remove('opacity-100', 'pointer-events-auto');
-        modal.classList.add('opacity-0', 'pointer-events-none');
-    }, 200);
-};
-
-// Onboarding specific actions
-window.processPayment = function() {
-    overviewData.creditBalance += 1000;
-    overviewData.onboardingStep = 2; // Move to next step
-    closePaymentModal();
-    setTimeout(() => {
-        renderOverviewContent();
-        showToast('Account successfully topped up with KES 1000!');
-    }, 250);
-};
-
-window.completeCreateAI = function() {
-    overviewData.onboardingStep = 3;
-    renderOverviewContent();
-    showToast('AI Agent successfully created!');
-};
-
-window.completeProcessLeads = function() {
-    overviewData.processedLeads = 30; // Free account limit demo
-    overviewData.unprocessedLeads -= 30;
-    overviewData.onboardingStep = 4;
-    renderOverviewContent();
-    showToast('30 Leads Processed! Your data mine is unlocked.');
-};
-
-window.completeFollowUps = function() {
-    overviewData.onboardingStep = 5;
-    renderOverviewContent();
-    showToast('Follow-up preferences saved!');
-};
-
-window.completeProducts = function() {
-    overviewData.onboardingStep = 6; // All done!
-    renderOverviewContent();
-    showToast('Products seeded! Onboarding complete.');
-};
-
-
-function showToast(message) {
-    let toast = document.getElementById('success-toast');
-    if (!toast) {
-        // Create toast if it doesn't exist
-        toast = document.createElement('div');
-        toast.id = 'success-toast';
-        toast.className = 'fixed bottom-4 right-4 bg-[#28A745] text-white px-6 py-3 rounded-xl font-bold shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-[999]';
-        toast.innerHTML = `<span></span>`;
-        document.body.appendChild(toast);
+    function getBusinessId() {
+        return localStorage.getItem('business_id');
     }
-    toast.querySelector('span').innerText = message;
-    toast.classList.remove('translate-y-20', 'opacity-0');
-    setTimeout(() => {
-        toast.classList.add('translate-y-20', 'opacity-0');
-    }, 3000);
-}
 
-// ─── Main Render Function ─────────────────────────────────────────────────────
+    function getSupabase() {
+        return window.getSupabase?.();
+    }
 
-function renderOverviewContent() {
-    const contentArea = document.getElementById('content-area');
-    
-    contentArea.className = 'absolute inset-0 z-10 p-4 md:p-8 overflow-y-auto custom-scrollbar flex items-start justify-center opacity-100 pointer-events-auto transition-opacity duration-700';
-    
-    // Define steps
-    const steps = [
-        {
-            id: 1,
-            title: "Load Credits",
-            desc: "Add KES 1000 minimum commitment to unlock high-value AI systems and start sending messages.",
-            btnText: "Add Funds (KES 1000)",
-            action: "openPaymentModal()",
-            icon: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`
-        },
-        {
-            id: 2,
-            title: "Create Your AI",
-            desc: "Provide basic info to generate a personalized AI that perfectly responds on your behalf.",
-            btnText: "Generate AI",
-            action: "completeCreateAI()",
-            icon: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>`
-        },
-        {
-            id: 3,
-            title: "Process All Leads",
-            desc: "Process 30 free leads now. Discover the goldmine of data sitting in your WhatsApp history.",
-            btnText: "Process 30 Leads",
-            action: "completeProcessLeads()",
-            icon: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>`
-        },
-        {
-            id: 4,
-            title: "Configure Follow-ups",
-            desc: "Tell us how you'd like your friendly AI to handle automated follow-ups. We do the heavy lifting.",
-            btnText: "Set Preferences",
-            action: "completeFollowUps()",
-            icon: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>`
-        },
-        {
-            id: 5,
-            title: "Process & Add Products",
-            desc: "Seed 10 products instantly to finish setup. Just click process, then add.",
-            btnText: "Process & Add",
-            action: "completeProducts()",
-            icon: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>`
+    // ─── Data fetchers ─────────────────────────────────────────────────────────
+    async function fetchDashboardData(businessId) {
+        const client = getSupabase();
+        if (!client || !businessId) return null;
+
+        try {
+            const [profileRes, metricsRes, activityRes] = await Promise.all([
+                client.from('businesses')
+                      .select('name, phone, email, plan, credits_balance, created_at')
+                      .eq('id', businessId)
+                      .single(),
+                client.from('business_metrics')
+                      .select('total_leads, active_conversations, messages_sent, revenue_attributed, conversion_rate')
+                      .eq('business_id', businessId)
+                      .single(),
+                client.from('conversation_events')
+                      .select('event_type, created_at, lead_name, summary')
+                      .eq('business_id', businessId)
+                      .order('created_at', { ascending: false })
+                      .limit(6),
+            ]);
+
+            return {
+                profile:  profileRes.data  || null,
+                metrics:  metricsRes.data  || null,
+                activity: activityRes.data || [],
+            };
+        } catch (err) {
+            console.error('[Dashboard] Data fetch error:', err);
+            return null;
         }
-    ];
-
-    let stepsHTML = '';
-    
-    if (overviewData.onboardingStep > 5) {
-        stepsHTML = `
-            <div class="glass-card p-8 text-center flex flex-col items-center justify-center py-16">
-                <div class="w-20 h-20 bg-[#28A745]/20 rounded-full flex items-center justify-center mb-6">
-                    <svg class="w-10 h-10 text-[#28A745]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
-                </div>
-                <h2 class="text-3xl font-black text-[#0F172A] mb-2">You're All Set!</h2>
-                <p class="text-slate-500 font-medium max-w-md">Your AI systems are armed and ready. Dashboard unlocking soon...</p>
-            </div>
-        `;
-    } else {
-        steps.forEach(step => {
-            const isCompleted = step.id < overviewData.onboardingStep;
-            const isActive = step.id === overviewData.onboardingStep;
-            const isLocked = step.id > overviewData.onboardingStep;
-
-            if (isActive) {
-                // Active Step: Encouraging, large, interactive
-                stepsHTML += `
-                    <div class="glass-card p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 transform transition-all duration-500 shadow-xl border-l-4 border-l-[#0F172A] bg-white">
-                        <div class="flex items-start gap-4">
-                            <div class="w-12 h-12 bg-[#0F172A] text-white rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-slate-900/20">
-                                ${step.icon}
-                            </div>
-                            <div>
-                                <h3 class="text-xl font-black text-[#0F172A] mb-1">Step ${step.id}: ${step.title}</h3>
-                                <p class="text-sm font-medium text-slate-500 max-w-lg">${step.desc}</p>
-                            </div>
-                        </div>
-                        <button onclick="${step.action}" class="w-full md:w-auto px-8 py-3.5 bg-[#0F172A] text-white font-bold rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10 whitespace-nowrap">
-                            ${step.btnText}
-                        </button>
-                    </div>
-                `;
-            } else if (isCompleted) {
-                // Completed Step: Greyed out, small, line-through
-                stepsHTML += `
-                    <div class="p-4 flex items-center gap-4 opacity-50 transform scale-95 transition-all duration-500">
-                        <div class="w-8 h-8 bg-[#28A745] text-white rounded-full flex items-center justify-center shrink-0">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-bold text-slate-500 line-through">Step ${step.id}: ${step.title}</h3>
-                        </div>
-                    </div>
-                `;
-            } else if (isLocked) {
-                // Locked Step: Small, faded, waiting
-                stepsHTML += `
-                    <div class="p-4 flex items-center gap-4 opacity-40 transform scale-95 transition-all duration-500 grayscale">
-                        <div class="w-8 h-8 bg-slate-200 text-slate-400 rounded-full flex items-center justify-center shrink-0 font-bold text-xs">
-                            ${step.id}
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-bold text-slate-400">Step ${step.id}: ${step.title}</h3>
-                        </div>
-                    </div>
-                `;
-            }
-        });
     }
-    
-    contentArea.innerHTML = `
-        <div class="flex flex-col w-full max-w-3xl mx-auto pb-10">
-            
-            <div class="mb-8 text-center md:text-left">
-                <h1 class="text-3xl font-black text-[#0F172A] mb-2 tracking-tight">Let's Get You Set Up</h1>
-                <p class="text-sm text-slate-500 font-medium">Complete this quick checklist (< 5 mins) to launch your system.</p>
-            </div>
 
-            <div class="flex flex-col gap-3">
-                ${stepsHTML}
-            </div>
+    // ─── Formatting helpers ────────────────────────────────────────────────────
+    function fmt(n, prefix = '') {
+        if (n == null) return '—';
+        if (n >= 1_000_000) return `${prefix}${(n / 1_000_000).toFixed(1)}M`;
+        if (n >= 1_000)     return `${prefix}${(n / 1_000).toFixed(1)}K`;
+        return `${prefix}${n.toLocaleString()}`;
+    }
 
-        </div>
+    function timeAgo(isoString) {
+        if (!isoString) return '';
+        const diff = Math.floor((Date.now() - new Date(isoString)) / 1000);
+        if (diff < 60)       return 'just now';
+        if (diff < 3600)     return `${Math.floor(diff / 60)}m ago`;
+        if (diff < 86400)    return `${Math.floor(diff / 3600)}h ago`;
+        return `${Math.floor(diff / 86400)}d ago`;
+    }
 
-        <!-- Payment Modal from your original code remains below -->
-        <div id="pay-modal" class="fixed inset-0 z-[110] flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
-            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onclick="closePaymentModal()"></div>
-            <div id="pay-modal-content" class="glass-card w-full max-w-sm relative z-10 p-8 shadow-2xl border border-white/80 transform scale-95 translate-y-4 opacity-0 transition-all duration-300 ease-out">
-                <div class="w-12 h-12 bg-[#28A745]/10 rounded-full flex items-center justify-center mb-4 mx-auto">
-                    <svg class="w-6 h-6 text-[#28A745]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+    function eventIcon(type) {
+        const icons = {
+            new_lead:    { bg: '#EFF6FF', color: '#3B82F6', svg: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>` },
+            message_sent:{ bg: '#F0FDF4', color: '#22C55E', svg: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>` },
+            sale_made:   { bg: '#FFF7ED', color: '#F97316', svg: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1"/>` },
+            default:     { bg: '#F8FAFC', color: '#64748B', svg: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>` },
+        };
+        return icons[type] || icons.default;
+    }
+
+    // ─── Render ────────────────────────────────────────────────────────────────
+    async function _render(businessId) {
+        console.log('[Dashboard] Render start for businessId:', businessId);
+        const el = document.getElementById('content-area');
+        if (!el) {
+            console.error('[Dashboard] Rendering aborted: #content-area not found.');
+            return;
+        }
+
+        // Set proper classes for full-height dashboard content with scrolling and transitions
+        el.className = 'absolute inset-0 z-10 p-4 md:p-8 overflow-y-auto custom-scrollbar opacity-100 pointer-events-auto transition-opacity duration-700';
+
+        const data = await fetchDashboardData(businessId);
+        if (!data) {
+            console.warn('[Dashboard] No data returned for businessId:', businessId); 
+        }
+        const p = data?.profile  || {};
+        const m = data?.metrics  || {};
+        const a = data?.activity || [];
+
+        const plan   = p.plan    || 'Starter';
+        const name   = p.name    || 'Your Business';
+        const bal    = p.credits_balance != null ? `KES ${p.credits_balance.toLocaleString()}` : '—';
+        const joined = p.created_at ? new Date(p.created_at).toLocaleDateString('en-KE', { month: 'long', year: 'numeric' }) : '';
+
+        const statCards = [
+            { label: 'Total Leads',      value: fmt(m.total_leads),             icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>`, accent: '#3B82F6', bg: '#EFF6FF' },
+            { label: 'Active Chats',     value: fmt(m.active_conversations),    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>`, accent: '#22C55E', bg: '#F0FDF4' },
+            { label: 'Messages Sent',    value: fmt(m.messages_sent),           icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>`, accent: '#8B5CF6', bg: '#F5F3FF' },
+            { label: 'Revenue via AI',   value: fmt(m.revenue_attributed, 'KES '), icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>`, accent: '#F59E0B', bg: '#FFFBEB' },
+        ];
+
+        const statHTML = statCards.map(s => `
+            <div style="background:#fff;border:1px solid #E2E8F0;border-radius:16px;padding:24px;
+                        display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,.05);">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <span style="font-size:13px;font-weight:600;color:#64748B;">${s.label}</span>
+                    <div style="background:${s.bg};color:${s.accent};padding:8px;border-radius:10px;display:flex;">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">${s.icon}</svg>
+                    </div>
                 </div>
-                <h2 class="text-2xl font-black text-center text-[#0F172A] mb-2 tracking-tight">Buy Credits</h2>
-                <p class="text-xs text-center text-slate-500 mb-6 font-medium px-4">Pay securely using M-Pesa. A prompt will be sent to your phone.</p>
-                
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Payment Method</label>
-                        <select class="w-full px-4 py-3 rounded-xl border border-white/60 bg-white/60 focus:border-[#28A745] outline-none transition-all font-bold text-slate-700 shadow-sm appearance-none">
-                            <option value="mpesa">M-Pesa Mobile Money</option>
-                        </select>
+                <div style="font-size:28px;font-weight:800;color:#0F172A;line-height:1;">${s.value}</div>
+            </div>`).join('');
+
+        const activityHTML = a.length === 0
+            ? `<div style="padding:32px;text-align:center;color:#94A3B8;font-size:14px;">No activity yet — your AI will log events here as it works.</div>`
+            : a.map(ev => {
+                const ic = eventIcon(ev.event_type);
+                return `
+                    <div style="display:flex;align-items:center;gap:14px;padding:14px 0;
+                                border-bottom:1px solid #F1F5F9;">
+                        <div style="background:${ic.bg};color:${ic.color};padding:10px;border-radius:10px;flex-shrink:0;">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">${ic.svg}</svg>
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-size:14px;font-weight:600;color:#0F172A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                ${ev.lead_name || 'Unknown'}
+                            </div>
+                            <div style="font-size:12px;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                ${ev.summary || ev.event_type || ''}
+                            </div>
+                        </div>
+                        <div style="font-size:11px;color:#94A3B8;white-space:nowrap;">${timeAgo(ev.created_at)}</div>
+                    </div>`;
+            }).join('');
+
+        el.innerHTML = `
+            <div style="display:flex;flex-direction:column;gap:24px;max-width:1200px;margin:0 auto;padding-bottom:40px;">
+
+                <!-- Business Profile Banner -->
+                <div style="background:#0F172A;border-radius:20px;padding:28px 32px;
+                            display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:20px;">
+                    <div style="display:flex;align-items:center;gap:16px;">
+                        <div style="width:52px;height:52px;background:#1E293B;border-radius:14px;
+                                    display:flex;align-items:center;justify-content:center;
+                                    font-size:22px;font-weight:800;color:#fff;flex-shrink:0;">
+                            ${name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <div style="font-size:20px;font-weight:800;color:#fff;">${name}</div>
+                            <div style="font-size:13px;color:#94A3B8;margin-top:2px;">
+                                ${p.phone || ''} ${joined ? '· Member since ' + joined : ''}
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">M-Pesa Number</label>
-                        <input type="tel" placeholder="2547XXXXXXXX" class="w-full px-4 py-3 rounded-xl border border-white/60 bg-white/60 focus:border-[#28A745] focus:ring-2 focus:ring-[#28A745]/20 outline-none transition-all font-bold text-slate-800 shadow-sm placeholder:text-slate-300">
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                        <div style="background:#1E293B;border-radius:12px;padding:12px 18px;text-align:center;">
+                            <div style="font-size:11px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:.05em;">Balance</div>
+                            <div style="font-size:18px;font-weight:800;color:#34D399;margin-top:2px;">${bal}</div>
+                        </div>
+                        <div style="background:#1E293B;border-radius:12px;padding:12px 18px;text-align:center;">
+                            <div style="font-size:11px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:.05em;">Plan</div>
+                            <div style="font-size:18px;font-weight:800;color:#fff;margin-top:2px;">${plan}</div>
+                        </div>
+                        <div style="background:#22C55E;border-radius:12px;padding:12px 18px;text-align:center;cursor:pointer;"
+                             onclick="window.switchPage('overview')"
+                             onmouseover="this.style.background='#16A34A'"
+                             onmouseout="this.style.background='#22C55E'">
+                            <div style="font-size:11px;font-weight:600;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.05em;">WhatsApp</div>
+                            <div style="font-size:14px;font-weight:800;color:#fff;margin-top:2px;">● Connected</div>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Amount (KES)</label>
-                        <input type="number" value="1000" readonly class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-100 outline-none text-slate-600 font-black cursor-not-allowed">
+                </div>
+
+                <!-- Stat Cards -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;">
+                    ${statHTML}
+                </div>
+
+                <!-- Main content: activity + quick actions -->
+                <div style="display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start;"
+                     class="dashboard-grid">
+                    <!-- Activity Feed -->
+                    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:16px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.05);">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                            <h3 style="font-size:16px;font-weight:800;color:#0F172A;">Live Activity</h3>
+                            <button onclick="window.switchPage('leads')"
+                                    style="font-size:12px;font-weight:600;color:#3B82F6;background:none;border:none;cursor:pointer;padding:0;">
+                                View all leads →
+                            </button>
+                        </div>
+                        ${activityHTML}
                     </div>
-                    
-                    <div class="flex gap-3 pt-4 mt-2 border-t border-slate-100">
-                        <button onclick="closePaymentModal()" class="flex-1 py-3.5 font-bold text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-xl transition-all">Cancel</button>
-                        <button onclick="processPayment()" class="flex-1 py-3.5 bg-[#0F172A] text-white font-black rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10">Pay 1000</button>
+
+                    <!-- Quick Actions -->
+                    <div style="display:flex;flex-direction:column;gap:12px;">
+                        ${[
+                            { label: 'View Analytics',   page: 'analytics',   icon: '#3B82F6', bg: '#EFF6FF' },
+                            { label: 'Manage Leads',     page: 'leads',       icon: '#22C55E', bg: '#F0FDF4' },
+                            { label: 'Products',         page: 'products',    icon: '#F59E0B', bg: '#FFFBEB' },
+                            { label: 'Preferences',      page: 'preferences', icon: '#8B5CF6', bg: '#F5F3FF' },
+                        ].map(q => `
+                            <button onclick="window.switchPage('${q.page}')"
+                                    style="background:#fff;border:1px solid #E2E8F0;border-radius:14px;
+                                           padding:16px 20px;text-align:left;cursor:pointer;width:100%;
+                                           display:flex;align-items:center;gap:14px;
+                                           transition:box-shadow .15s,transform .15s;
+                                           box-shadow:0 1px 3px rgba(0,0,0,.05);"
+                                    onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,.1)';this.style.transform='translateY(-2px)'"
+                                    onmouseout="this.style.boxShadow='0 1px 3px rgba(0,0,0,.05)';this.style.transform='translateY(0)'">
+                                <div style="background:${q.bg};color:${q.icon};padding:10px;border-radius:10px;flex-shrink:0;">
+                                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </div>
+                                <span style="font-size:14px;font-weight:700;color:#0F172A;">${q.label}</span>
+                            </button>`).join('')}
                     </div>
                 </div>
             </div>
-        </div>
-    `;
-}
 
-// Automatically render if this script is loaded and the container exists
-if (document.getElementById('content-area') && typeof PAGE_CONFIG === 'undefined') {
-    renderOverviewContent();
-}
+            <style>
+                @media (max-width: 768px) {
+                    .dashboard-grid { grid-template-columns: 1fr !important; }
+                }
+            </style>`;
+    }
 
-// Ensure it hooks into your navigation system if PAGE_CONFIG exists
-if (typeof window.PAGE_CONFIG !== 'undefined') {
-    window.PAGE_CONFIG.overview = {
-        title: 'Onboarding',
-        description: 'Get your AI systems up and running in 5min!',
-        navId: 'nav-overview',
-        render: renderOverviewContent
+    // ─── Registration ──────────────────────────────────────────────────────────
+    //
+    // Only register if onboarding is complete.
+    // We check window.onboardingData (set by nav.js's _loadOnboardingStatus).
+    // If it's not loaded yet (script tag order issue), we defer registration
+    // until DOMContentLoaded when onboardingData should be available.
+    // ─── Expose render function ───────────────────────────────────────────────
+    // overviewRouter.js will call this when onboarding is complete
+    window._renderDashboard = async function (businessId) {
+        const activeId = businessId || getBusinessId();
+        await _render(activeId);
     };
-}
+
+})();
