@@ -57,14 +57,42 @@
         if (label) label.textContent = text;
     }
 
+    // ─── Intelligent Error Translator ─────────────────────────────────────────
+    function getFriendlyErrorMessage(error) {
+        if (!error) return 'Please check your email and password.';
+        
+        const message = error.message || String(error);
+        console.error("Caught Auth System Exception:", message);
+
+        if (message.toLowerCase().includes('cannot send') || message.toLowerCase().includes('confirmation mail')) {
+            return 'Please check your email and password setup. The authentication service is temporarily throttled. Ensure "Confirm Email" is disabled in your Supabase Auth settings to test signups.';
+        }
+        if (message.toLowerCase().includes('already registered') || message.toLowerCase().includes('user already exists')) {
+            return 'This email address is already registered. Please check your password or head over to the sign in page.';
+        }
+        if (message.toLowerCase().includes('signup_disabled')) {
+            return 'Account creation is currently disabled on this instance. Please check your Supabase configurations.';
+        }
+        if (message.toLowerCase().includes('password should be')) {
+            return 'Password choice rejected. Please verify it meets all strength conditions listed below.';
+        }
+        if (message.toLowerCase().includes('invalid credentials') || message.toLowerCase().includes('invalid token')) {
+            return 'Please check your email and password credentials and try again.';
+        }
+
+        return 'Registration issue: ' + message;
+    }
+
     function notify(msg, isError = true) {
         const toast   = document.getElementById('toast');
         const msgEl   = document.getElementById('toast-message');
         if (!toast || !msgEl) return;
         msgEl.textContent = msg;
-        toast.style.backgroundColor = isError ? '#ef4444' : '#28A745';
+        
+        // Uses Action Orange for system alerts/errors, and Action Green for success responses
+        toast.style.backgroundColor = isError ? '#FF8C00' : '#28A745';
         toast.classList.remove('translate-y-[-150%]');
-        setTimeout(() => toast.classList.add('translate-y-[-150%]'), 4000);
+        setTimeout(() => toast.classList.add('translate-y-[-150%]'), 5000);
     }
 
     // ─── On load: skip to dashboard if already set up ─────────────────────────
@@ -179,10 +207,6 @@
             }
 
             // ── Check if email already exists — redirect to login instead ─────
-            // Supabase signUp on an existing confirmed email returns a fake success
-            // (to prevent enumeration), so we try signInWithPassword first with a
-            // dummy password just to detect "Invalid credentials" vs "Email not found".
-            // Better approach: just attempt signUp and handle the duplicate case.
             const { data: signUpData, error: signUpError } = await client.auth.signUp({
                 email:    currentEmail,
                 password: password,
@@ -190,21 +214,15 @@
 
             if (signUpError) {
                 if (btn) { btn.textContent = 'Create Account'; btn.disabled = false; }
-
-                // Supabase doesn't expose "already registered" directly for security,
-                // but the user object will have `identities: []` if email is taken.
-                if (signUpError.message?.toLowerCase().includes('already registered')) {
-                    notify('This email already has an account. Use the Sign In page instead.');
-                } else {
-                    notify('Registration failed: ' + signUpError.message);
-                }
+                const friendlyMessage = getFriendlyErrorMessage(signUpError);
+                notify(friendlyMessage);
                 return;
             }
 
             // Supabase returns identities: [] when email already exists (confirmed)
             if (signUpData?.user?.identities?.length === 0) {
                 if (btn) { btn.textContent = 'Create Account'; btn.disabled = false; }
-                notify('This email is already registered. Please sign in instead.');
+                notify('This email is already registered. Please check your email and password or sign in instead.');
                 setTimeout(() => { window.location.href = 'login.html'; }, 2000);
                 return;
             }
@@ -220,8 +238,9 @@
             if (btn) { btn.textContent = 'Create Account'; btn.disabled = false; }
 
             if (otpError) {
-                notify('Account created but could not send verification code: ' + otpError.message);
-                // Still move them to OTP step — they can use "Resend"
+                const friendlyMessage = getFriendlyErrorMessage(otpError);
+                notify(friendlyMessage);
+                // Move them forward to the OTP step regardless so they can use "Resend" option safely
             } else {
                 notify('Verification code sent to ' + currentEmail + '!', false);
             }
@@ -288,7 +307,8 @@
                 if (btn) { btn.textContent = 'Verify & Continue'; btn.disabled = false; }
                 otpBoxes.forEach(b => { b.value = ''; });
                 otpBoxes[0].focus();
-                notify('Invalid or expired code. Please try again.');
+                const friendlyMessage = getFriendlyErrorMessage(error);
+                notify(friendlyMessage);
                 return;
             }
 
@@ -312,7 +332,8 @@
             email:   currentEmail,
             options: { shouldCreateUser: false },
         });
-        notify(error ? 'Could not resend: ' + error.message : 'New code sent!', !!error);
+        const msg = error ? getFriendlyErrorMessage(error) : 'New code sent!';
+        notify(msg, !!error);
     };
 
     // ─── STEP 4: poll for onboarded client get business_id ─────────────────────────────────────
