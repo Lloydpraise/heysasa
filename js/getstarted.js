@@ -1,37 +1,18 @@
 /**
- * get-started.js — HeySasa! New User Onboarding
- *
- * Flow:
- *   Step 1 (url)      → validate website URL
- *   Step 2 (login)    → register email + password → signUp → send OTP
- *   Step 3 (otp)      → verify OTP → mark email confirmed
- *   Step 4 (whatsapp) → call onboarding edge function → show QR → poll connection
- *
- * OTP is ONLY sent during new account registration here.
- * Returning users go through login.js instead.
- *
- * localStorage contract (matches dashboard.html boot sequence):
- *   business_id   — short business identifier
- *   session_id    — Supabase session access token
- *   user_email    — for profile.js display
+ * get-started.js — HeySasa! New User Registration Flow
  */
 
 (function () {
     'use strict';
 
-    // ─── State ─────────────────────────────────────────────────────────────────
     let currentEmail       = '';
     let targetWebsiteUrl   = '';
-    let currentBusinessId  = null;
-    let currentInstanceName = null;
-    let connectionPollTimer = null;
 
     // ─── DOM ───────────────────────────────────────────────────────────────────
     const screens = {
         url:      document.getElementById('step-url'),
         login:    document.getElementById('step-login'),
         otp:      document.getElementById('step-otp'),
-        whatsapp: document.getElementById('step-whatsapp'),
     };
     const otpBoxes = document.querySelectorAll('.otp-box');
 
@@ -39,22 +20,6 @@
     function goToStep(key) {
         Object.values(screens).forEach(s => s?.classList.remove('active'));
         screens[key]?.classList.add('active');
-
-        const container = document.getElementById('main-container');
-        if (container) {
-            if (key === 'whatsapp') {
-                container.classList.replace('max-w-md', 'max-w-5xl');
-            } else {
-                container.classList.replace('max-w-5xl', 'max-w-md');
-            }
-        }
-    }
-
-    function updateProgress(pct, text) {
-        const bar  = document.getElementById('progress-bar');
-        const label = document.getElementById('status-text');
-        if (bar)   bar.style.width = pct + '%';
-        if (label) label.textContent = text;
     }
 
     function notify(msg, isError = true) {
@@ -67,51 +32,34 @@
         setTimeout(() => toast.classList.add('translate-y-[-150%]'), 4000);
     }
 
-    // ─── On load: skip to dashboard if already set up ─────────────────────────
+    function getAuth() {
+        if (!window.authManager) {
+            throw new Error('Authentication manager missing. Ensure auth.js is loaded.');
+        }
+        return window.authManager;
+    }
+
+    // ─── Boot ──────────────────────────────────────────────────────────────────
     window.addEventListener('DOMContentLoaded', async () => {
-        // If they already have a business + session, skip the whole flow
         const existingBusiness = localStorage.getItem('business_id');
         const existingSession  = localStorage.getItem('session_id');
-        if (existingBusiness && existingSession) {
+        if (existingBusiness && existingSession && existingBusiness !== 'pending') {
             window.location.href = 'dashboard.html';
             return;
         }
 
-        // Check for a live Supabase session (e.g. email link click)
-        const client = window.getSupabase?.();
-        if (client) {
-            const { data: { session } } = await client.auth.getSession();
-            if (session) {
-                // They verified email via magic link — check if business exists
-                const { data: biz } = await client
-                    .from('businesses')
-                    .select('id')
-                    .eq('user_id', session.user.id)
-                    .maybeSingle();
-
-                if (biz?.id) {
-                    // Already fully onboarded — send to dashboard
-                    localStorage.setItem('business_id', biz.id);
-                    localStorage.setItem('session_id',  session.access_token);
-                    localStorage.setItem('user_email',  session.user.email);
-                    window.location.href = 'dashboard.html';
-                    return;
-                }
-
-                // Authenticated but no business yet — resume from whatsapp step
-                currentEmail = session.user.email;
-                const instanceName = localStorage.getItem('sb_instance_name');
-                if (instanceName) {
-                    currentInstanceName = instanceName;
-                    goToStep('whatsapp');
-                    updateProgress(80, 'Resuming setup…');
-                    startConnectionPolling(instanceName);
-                    return;
-                }
+        try {
+            const res = await getAuth().getSession();
+            if (res.success && res.data?.session) {
+                localStorage.setItem('session_id', res.data.session.access_token);
+                localStorage.setItem('user_email', res.data.session.user.email);
+                window.location.href = 'dashboard.html';
+                return;
             }
+        } catch (e) {
+            console.error(e);
         }
 
-        // Pre-fill URL from query param if coming from marketing page
         const urlParams = new URLSearchParams(window.location.search);
         const passedUrl = urlParams.get('url');
         if (passedUrl) {
@@ -120,9 +68,27 @@
         } else {
             goToStep('url');
         }
+
+        // Inject "Don't have a website?" option below the URL form if element exists
+        const urlFormEl = document.getElementById('url-form');
+        if (urlFormEl) {
+            const skipContainer = document.createElement('div');
+            skipContainer.style.cssText = 'text-align:center; margin-top:16px;';
+            skipContainer.innerHTML = `
+                <button type="button" id="btn-skip-url" style="background:none; border:none; color:#64748B; font-size:14px; font-weight:600; text-decoration:underline; cursor:pointer;">
+                    Don't have a website? Click Here
+                </button>
+            `;
+            urlFormEl.appendChild(skipContainer);
+
+            document.getElementById('btn-skip-url')?.addEventListener('click', () => {
+                targetWebsiteUrl = 'https://heysasa.com/placeholder';
+                goToStep('login');
+            });
+        }
     });
 
-    // ─── STEP 1: URL ───────────────────────────────────────────────────────────
+    // ─── STEP 1: URL Submission ───────────────────────────────────────────────
     const urlForm = document.getElementById('url-form');
     if (urlForm) {
         urlForm.addEventListener('submit', (e) => {
@@ -141,7 +107,6 @@
         });
     }
 
-    // ─── Password strength indicator ───────────────────────────────────────────
     const passwordInput = document.getElementById('password');
     if (passwordInput) {
         passwordInput.addEventListener('input', () => {
@@ -155,7 +120,7 @@
         document.getElementById(id)?.classList.toggle('valid', valid);
     }
 
-    // ─── STEP 2: Register ──────────────────────────────────────────────────────
+    // ─── STEP 2: Registration Account Creation ─────────────────────────────────
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
@@ -171,57 +136,33 @@
 
             if (btn) { btn.textContent = 'Creating account…'; btn.disabled = true; }
 
-            const client = window.getSupabase?.();
-            if (!client) {
-                notify('Auth service unavailable. Please refresh.');
+            const signUpRes = await getAuth().signUpWithPassword(currentEmail, password);
+
+            if (!signUpRes.success) {
                 if (btn) { btn.textContent = 'Create Account'; btn.disabled = false; }
-                return;
-            }
-
-            // ── Check if email already exists — redirect to login instead ─────
-            // Supabase signUp on an existing confirmed email returns a fake success
-            // (to prevent enumeration), so we try signInWithPassword first with a
-            // dummy password just to detect "Invalid credentials" vs "Email not found".
-            // Better approach: just attempt signUp and handle the duplicate case.
-            const { data: signUpData, error: signUpError } = await client.auth.signUp({
-                email:    currentEmail,
-                password: password,
-            });
-
-            if (signUpError) {
-                if (btn) { btn.textContent = 'Create Account'; btn.disabled = false; }
-
-                // Supabase doesn't expose "already registered" directly for security,
-                // but the user object will have `identities: []` if email is taken.
-                if (signUpError.message?.toLowerCase().includes('already registered')) {
+                if (signUpRes.error?.message?.toLowerCase().includes('already registered')) {
                     notify('This email already has an account. Use the Sign In page instead.');
                 } else {
-                    notify('Registration failed: ' + signUpError.message);
+                    notify('Registration failed: ' + signUpRes.error?.message);
                 }
                 return;
             }
 
-            // Supabase returns identities: [] when email already exists (confirmed)
-            if (signUpData?.user?.identities?.length === 0) {
+            if (signUpRes.data?.user?.identities?.length === 0) {
                 if (btn) { btn.textContent = 'Create Account'; btn.disabled = false; }
                 notify('This email is already registered. Please sign in instead.');
                 setTimeout(() => { window.location.href = 'login.html'; }, 2000);
                 return;
             }
 
-            // ── New user confirmed — send OTP ─────────────────────────────────
             if (btn) btn.textContent = 'Sending code…';
 
-            const { error: otpError } = await client.auth.signInWithOtp({
-                email:   currentEmail,
-                options: { shouldCreateUser: false }, // user already created above
-            });
+            const otpRes = await getAuth().signInWithOtp(currentEmail);
 
             if (btn) { btn.textContent = 'Create Account'; btn.disabled = false; }
 
-            if (otpError) {
-                notify('Account created but could not send verification code: ' + otpError.message);
-                // Still move them to OTP step — they can use "Resend"
+            if (!otpRes.success) {
+                notify('Account created but could not send verification code: ' + otpRes.error?.message);
             } else {
                 notify('Verification code sent to ' + currentEmail + '!', false);
             }
@@ -232,7 +173,7 @@
         });
     }
 
-    // ─── STEP 3: OTP verification ──────────────────────────────────────────────
+    // ─── STEP 3: OTP Code Entry ────────────────────────────────────────────────
     otpBoxes.forEach((box, i) => {
         box.addEventListener('input', () => {
             box.value = box.value.replace(/\D/g, '');
@@ -242,7 +183,6 @@
         box.addEventListener('keydown', (e) => {
             if (e.key === 'Backspace' && !box.value && i > 0) otpBoxes[i - 1].focus();
         });
-        // Paste handler on first box
         if (i === 0) {
             box.addEventListener('paste', (e) => {
                 e.preventDefault();
@@ -277,14 +217,9 @@
 
             if (btn) { btn.textContent = 'Verifying…'; btn.disabled = true; }
 
-            const client = window.getSupabase?.();
-            const { data, error } = await client.auth.verifyOtp({
-                email: currentEmail,
-                token,
-                type: 'email',
-            });
+            const res = await getAuth().verifyOtp(currentEmail, token);
 
-            if (error) {
+            if (!res.success) {
                 if (btn) { btn.textContent = 'Verify & Continue'; btn.disabled = false; }
                 otpBoxes.forEach(b => { b.value = ''; });
                 otpBoxes[0].focus();
@@ -292,123 +227,26 @@
                 return;
             }
 
-            // Persist session token so dashboard boot can verify
-            if (data?.session) {
-                localStorage.setItem('session_id', data.session.access_token);
-                localStorage.setItem('user_email', currentEmail);
+            if (res.data?.session) {
+                localStorage.setItem('session_id',  res.data.session.access_token);
+                localStorage.setItem('user_email',  currentEmail);
+                localStorage.setItem('business_id', 'pending'); 
             }
 
-            notify('Identity verified!', false);
-            // Small delay so the user sees the success message
-            setTimeout(() => startOnboarding(targetWebsiteUrl), 600);
+            // Save the chosen website context to use inside onboarding.js
+            if (targetWebsiteUrl) {
+                localStorage.setItem('onboarding_target_url', targetWebsiteUrl);
+            }
+
+            notify('Identity verified! Forwarding to your setup wizard…', false);
+            setTimeout(() => { window.location.href = 'dashboard.html'; }, 1000);
         });
     }
 
-    // ─── Resend OTP ────────────────────────────────────────────────────────────
     window.resendOtp = async function () {
-        const client = window.getSupabase?.();
-        if (!client || !currentEmail) return;
-        const { error } = await client.auth.signInWithOtp({
-            email:   currentEmail,
-            options: { shouldCreateUser: false },
-        });
-        notify(error ? 'Could not resend: ' + error.message : 'New code sent!', !!error);
+        if (!currentEmail) return;
+        const res = await getAuth().signInWithOtp(currentEmail);
+        notify(!res.success ? 'Could not resend: ' + res.error?.message : 'New code sent!', !res.success);
     };
-
-    // ─── STEP 4: poll for onboarded client get business_id ─────────────────────────────────────
-    async function startOnboarding(websiteUrl) {
-        goToStep('whatsapp');
-        updateProgress(30, 'Fetching your business profile…');
-
-        const client = window.getSupabase?.();
-        if (!client) {
-            notify('Service unavailable. Please refresh.');
-            return;
-        }
-
-        try {
-            // Get current user session to pull the auto-created business row
-            const { data: { user } } = await client.auth.getUser();
-            if (!user) throw new Error('User session not found.');
-
-            const { data: biz, error: bizError } = await client
-                .from('businesses')
-                .select('id')
-                .eq('user_id', user.id)
-                .maybeSingle();
-
-            if (bizError || !biz?.id) {
-                throw new Error('Business profile creation pending. Please refresh or try again.');
-            }
-
-            const businessId   = biz.id;
-            const instanceName = `heysasa_${businessId}`;
-
-            // ── Save everything to localStorage ──────────────────────────────
-            localStorage.setItem('business_id',       businessId);
-            localStorage.setItem('sb_instance_name',  instanceName);
-
-            currentBusinessId   = businessId;
-            currentInstanceName = instanceName;
-
-            updateProgress(50, 'Initializing AI setup…');
-
-            // Invoke the orchestrator, passing the existing business ID along
-            const { data, error } = await client.functions.invoke('onboarding-ochestrator', {
-                body: { businessId, websiteUrl },
-            });
-
-            if (error) throw new Error(error.message || 'Edge function error');
-
-            // Show QR code
-            const qrImg = document.querySelector('#step-whatsapp img');
-            if (qrImg && data.qrcode) qrImg.src = data.qrcode;
-
-            updateProgress(80, 'Scan the QR code to connect WhatsApp');
-            startConnectionPolling(instanceName);
-
-        } catch (err) {
-            console.error('[get-started] Onboarding error:', err);
-            notify('Setup running in background — taking you to your dashboard.', false);
-            updateProgress(100, 'Redirecting…');
-            setTimeout(() => { window.location.href = 'dashboard.html'; }, 2500);
-        }
-    }
-
-    // ─── Poll for WhatsApp connection ──────────────────────────────────────────
-    function startConnectionPolling(instanceName) {
-        if (connectionPollTimer) clearInterval(connectionPollTimer);
-
-        let attempts = 0;
-        const MAX    = 60; // 2 min at 2s intervals
-
-        connectionPollTimer = setInterval(async () => {
-            attempts++;
-            try {
-                const client = window.getSupabase?.();
-                if (!client) return;
-
-                const { data, error } = await client
-                    .from('businesses')
-                    .select('status')
-                    .eq('id', currentBusinessId)
-                    .maybeSingle();
-
-                if (!error && data?.status === 'connected') {
-                    clearInterval(connectionPollTimer);
-                    updateProgress(100, 'WhatsApp connected!');
-                    notify('WhatsApp connected successfully!', false);
-                    setTimeout(() => { window.location.href = 'dashboard.html'; }, 1500);
-                }
-
-                if (attempts >= MAX) {
-                    clearInterval(connectionPollTimer);
-                    updateProgress(100, 'Scan timeout — you can reconnect from the dashboard.');
-                }
-            } catch (err) {
-                console.error('[get-started] Polling error:', err);
-            }
-        }, 2000);
-    }
 
 })();

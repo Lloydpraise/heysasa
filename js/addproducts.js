@@ -1,411 +1,309 @@
-// ==========================================
-// AI PRODUCT IMPORTER - IMAGE QUEUE & PROCESSING
-// ==========================================
+/**
+ * addproducts.js — The Unified Approval Studio (Self-Contained)
+ * --------------------------------------------------------
+ * This file injects its own HTML into the dashboard, fetches products 
+ * with status='discovered', allows rapid inline editing via a 
+ * card grid, and bulk-upserts them to status='approved'.
+ */
 
-window.imageQueue = window.imageQueue || []; 
-window.processingInProgress = window.processingInProgress || false;
-window.currentBusinessId = window.currentBusinessId || 'fortunebooks12';
+import { supabase } from './supabaseClient.js'; 
 
-// Initialize importer on page load
-document.addEventListener('DOMContentLoaded', () => {
-    initializeImporter();
-});
+// --- GLOBAL STATE ---
+let currentProducts = [];
+let businessId = localStorage.getItem('business_id') || ''; 
 
-function initializeImporter() {
-    const fileInput = document.getElementById('aiFileInput');
-    if (fileInput) {
-        fileInput.addEventListener('change', handleFileSelect);
+// --- DOM ELEMENT REFERENCES (Populated dynamically) ---
+let gridContainer = null;
+let bulkSaveBtn   = null;
+let loadingState  = null;
+let emptyState    = null;
+
+/**
+ * Initialize the Studio.
+ * @param {string} targetContainerId - The ID of the div in dashboard.html where this view should load.
+ * @param {Array} preloadedProducts - Optional array of products if redirecting from manual upload.
+ */
+export async function initApprovalStudio(targetContainerId = 'main-content', preloadedProducts = null) {
+    if (!businessId) {
+        console.error("No Business ID found in local storage.");
+        return;
     }
+
+    const targetContainer = document.getElementById(targetContainerId);
+    if (!targetContainer) {
+        console.error(`[ApprovalStudio] Target container #${targetContainerId} not found in dashboard.html`);
+        return;
+    }
+
+    // 1. Inject the HTML Skeleton
+    injectHTMLSkeleton(targetContainer);
+
+    // 2. Grab the newly created DOM elements
+    gridContainer = document.getElementById('approval-grid');
+    bulkSaveBtn   = document.getElementById('bulk-save-btn');
+    loadingState  = document.getElementById('loading-state');
+    emptyState    = document.getElementById('empty-state');
+
+    // 3. Attach the main button listener immediately
+    bulkSaveBtn.addEventListener('click', bulkApproveAndSave);
+
+    // 4. Fetch and Render
+    showLoading(true);
+    if (preloadedProducts && preloadedProducts.length > 0) {
+        currentProducts = preloadedProducts;
+    } else {
+        currentProducts = await fetchDiscoveredProducts();
+    }
+    showLoading(false);
+    renderGrid();
 }
 
-// ==========================================
-// FILE SELECTION & BASE64 CONVERSION
-// ==========================================
-
-function handleFileSelect(event) {
-    const files = Array.from(event.target.files);
-    if (files.length === 0) return;
-    
-    const file = files[0];
-    
-    if (!file.type.startsWith('image/')) {
-        showNotification('Please upload an image file (JPG, PNG, WEBP)', 'error');
-        return;
-    }
-    
-    const maxSize = 5 * 1024 * 1024;
-    if (file.size > maxSize) {
-        showNotification('Image must be smaller than 5MB', 'error');
-        return;
-    }
-    
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const base64String = e.target.result;
-        
-        window.imageQueue = [{
-            id: Date.now(),
-            file: file,
-            name: file.name,
-            base64: base64String,
-            size: file.size,
-            timestamp: new Date(),
-            status: 'pending'
-        }];
-        
-        updateQueueDisplay();
-        updateReviewCount();
-        
-        event.target.value = '';
-        showNotification(`Image queued: ${file.name}`, 'success');
-    };
-    
-    reader.onerror = () => {
-        showNotification('Error reading file', 'error');
-    };
-    
-    reader.readAsDataURL(file);
-}
-
-// ==========================================
-// QUEUE MANAGEMENT & DISPLAY
-// ==========================================
-
-function updateQueueDisplay() {
-    const queueList = document.getElementById('aiQueueList');
-    if (!queueList) return;
-    
-    if (window.imageQueue.length === 0) {
-        queueList.innerHTML = `<div id="aiEmptyQueueMsg" class="text-center text-[#94A3B8] text-xs py-10 italic">Queue is empty</div>`;
-        return;
-    }
-    
-    const emptyMsg = document.getElementById('aiEmptyQueueMsg');
-    if (emptyMsg) emptyMsg.remove();
-    
-    queueList.innerHTML = window.imageQueue.map((img, index) => `
-        <div class="flex items-center gap-3 p-3 bg-white/50 rounded-lg border border-white/60 group hover:bg-white/80 transition-all">
-            <div class="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 border border-gray-200">
-                <img src="${img.base64}" alt="${img.name}" class="w-full h-full object-cover">
-                ${img.status === 'processing' ? `
-                    <div class="absolute inset-0 bg-black/40 flex items-center justify-center">
-                        <div class="loader-spinner"></div>
-                    </div>
-                ` : ''}
-                ${img.status === 'completed' ? `
-                    <div class="absolute inset-0 bg-[#28A745]/80 flex items-center justify-center">
-                        <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                        </svg>
-                    </div>
-                ` : ''}
-                ${img.status === 'error' ? `
-                    <div class="absolute inset-0 bg-red-500/80 flex items-center justify-center">
-                        <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
-                        </svg>
-                    </div>
-                ` : ''}
+/**
+ * Builds the UI shell dynamically
+ */
+function injectHTMLSkeleton(container) {
+    container.innerHTML = `
+        <div class="approval-studio-wrapper relative min-h-screen pb-24 animate-fade-in">
+            <div class="mb-8">
+                <h2 class="text-2xl font-extrabold text-gray-900">Product Approval Studio ✨</h2>
+                <p class="text-gray-500 text-sm mt-1">Review, price, and publish discovered products to your AI agent.</p>
             </div>
-            
-            <div class="flex-1 min-w-0">
-                <p class="text-xs font-bold text-[#0F172A] truncate">${img.name}</p>
-                <p class="text-[10px] text-[#94A3B8]">${formatFileSize(img.size)}</p>
-            </div>
-            
-            <button onclick="window.removeFromQueue(${img.id})" class="p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 rounded-lg text-red-500">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+
+            <div id="loading-state" class="flex flex-col items-center justify-center py-20" style="display: none;">
+                <svg class="animate-spin h-10 w-10 text-blue-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-            </button>
-        </div>
-    `).join('');
-}
-
-function removeFromQueue(imageId) {
-    window.imageQueue = window.imageQueue.filter(img => img.id !== imageId);
-    updateQueueDisplay();
-    updateReviewCount();
-    updateProcessBtn();
-    
-    if (window.imageQueue.length === 0) {
-        showNotification('Image removed from queue', 'info');
-    }
-}
-
-// ==========================================
-// IMAGE PROCESSING & AI ANALYSIS
-// ==========================================
-
-async function startAiProcessing() {
-    const businessId = localStorage.getItem('current_business_id') || window.currentBusinessId;
-    
-    if (window.imageQueue.length === 0) {
-        showNotification('No images in queue', 'error');
-        return;
-    }
-    
-    if (window.processingInProgress) {
-        showNotification('Processing already in progress', 'warning');
-        return;
-    }
-    
-    window.processingInProgress = true;
-    updateProcessBtn();
-    
-    for (let i = 0; i < window.imageQueue.length; i++) {
-        const imageItem = window.imageQueue[i];
-        imageItem.status = 'processing';
-        updateQueueDisplay();
-        
-        try {
-            const result = await sendImageToAI(imageItem.base64, businessId);
-            
-            if (result.success) {
-                imageItem.status = 'completed';
-                imageItem.aiData = result.data;
-                addToReviewContainer(imageItem);
-                showNotification(`Image analyzed successfully`, 'success');
-            } else {
-                imageItem.status = 'error';
-                imageItem.error = result.error;
-                showNotification(`Error analyzing image: ${result.error}`, 'error');
-            }
-        } catch (error) {
-            imageItem.status = 'error';
-            imageItem.error = error.message;
-            showNotification(`Error: ${error.message}`, 'error');
-        }
-        
-        updateQueueDisplay();
-    }
-    
-    window.processingInProgress = false;
-    updateProcessBtn();
-    
-    setTimeout(() => {
-        window.imageQueue = [];
-        updateQueueDisplay();
-    }, 2000);
-}
-
-async function sendImageToAI(base64Image, businessId) {
-    try {
-        const base64Data = base64Image.split(',')[1];
-        
-        // Use global variables or configuration for edge endpoints
-        const url = (typeof SUPABASE_URL !== 'undefined') ? SUPABASE_URL : '';
-        const key = (typeof SUPABASE_ANON_KEY !== 'undefined') ? SUPABASE_ANON_KEY : '';
-
-        const response = await fetch(
-            `${url}/functions/v1/analyze-product-image`,
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${key}`
-                },
-                body: JSON.stringify({
-                    image_base64: base64Data,
-                    business_id: businessId
-                })
-            }
-        );
-        
-        const data = await response.json();
-        if (!response.ok) {
-            return { success: false, error: data.error || 'Unknown error occurred' };
-        }
-        return { success: true, data: data };
-    } catch (error) {
-        return { success: false, error: error.message };
-    }
-}
-
-// ==========================================
-// REVIEW CONTAINER MANAGEMENT
-// ==========================================
-
-function addToReviewContainer(imageItem) {
-    const reviewContainer = document.getElementById('aiReviewContainer');
-    if (!reviewContainer) return;
-    
-    const emptyState = reviewContainer.querySelector('.col-span-full');
-    if (emptyState && emptyState.textContent.includes('Processed products')) {
-        emptyState.remove();
-    }
-    
-    const reviewCard = document.createElement('div');
-    reviewCard.className = 'review-card-dashboard p-5 rounded-2xl space-y-4 bg-white border border-gray-100 shadow-sm';
-    reviewCard.id = `review-${imageItem.id}`;
-    reviewCard.innerHTML = `
-        <div class="w-full h-48 rounded-xl overflow-hidden bg-gray-100">
-            <img src="${imageItem.base64}" alt="Product" class="w-full h-full object-cover">
-        </div>
-        
-        <div class="space-y-3">
-            <div>
-                <label class="text-xs font-bold text-[#94A3B8] uppercase tracking-wider block mb-1">Product Name</label>
-                <input type="text" value="${imageItem.aiData?.product_name || 'Untitled Product'}" 
-                       class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 ring-[#28A745]/20"
-                       placeholder="Enter product name">
+                <p class="text-gray-500 font-medium">Loading discovered items...</p>
             </div>
-            
-            <div>
-                <label class="text-xs font-bold text-[#94A3B8] uppercase tracking-wider block mb-1">Description</label>
-                <textarea class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 ring-[#28A745]/20 resize-none h-20"
-                          placeholder="Enter product description">${imageItem.aiData?.description || ''}</textarea>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="text-xs font-bold text-[#94A3B8] uppercase tracking-wider block mb-1">Category</label>
-                    <input type="text" value="${imageItem.aiData?.category || ''}" 
-                           class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 ring-[#28A745]/20"
-                           placeholder="Category">
+
+            <div id="empty-state" class="flex flex-col items-center justify-center py-20" style="display: none;">
+                <div class="bg-gray-50 rounded-full p-6 mb-4">
+                    <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
                 </div>
-                <div>
-                    <label class="text-xs font-bold text-[#94A3B8] uppercase tracking-wider block mb-1">Price (KSh)</label>
-                    <input type="number" value="${imageItem.aiData?.suggested_price || ''}" 
-                           class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 ring-[#28A745]/20"
-                           placeholder="0.00">
-                </div>
+                <h3 class="text-lg font-bold text-gray-900">You're all caught up!</h3>
+                <p class="text-gray-500 text-sm mt-1">No new products waiting for approval.</p>
             </div>
-            
-            <div>
-                <label class="text-xs font-bold text-[#94A3B8] uppercase tracking-wider block mb-1">AI Analysis</label>
-                <div class="bg-[#28A745]/5 border border-[#28A745]/20 rounded-lg p-3 text-xs text-[#0F172A] leading-relaxed">
-                    ${imageItem.aiData?.analysis || 'No analysis available'}
-                </div>
+
+            <div id="approval-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+
+            <div class="fixed bottom-8 right-8 z-50">
+                <button id="bulk-save-btn" style="display: none;" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-full shadow-2xl transform transition hover:-translate-y-1 text-lg flex items-center gap-2">
+                    🚀 Approve & Publish All
+                </button>
             </div>
-        </div>
-        
-        <div class="flex gap-2 pt-2">
-            <button onclick="window.publishProduct(${imageItem.id})" class="flex-1 py-2.5 bg-[#28A745] text-white rounded-lg text-xs font-bold hover:bg-[#208739] transition-all">
-                Publish
-            </button>
-            <button onclick="window.removeReviewCard(${imageItem.id})" class="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-200 transition-all">
-                Discard
-            </button>
         </div>
     `;
-    
-    reviewContainer.appendChild(reviewCard);
-    updateReviewCount();
 }
 
-function removeReviewCard(imageId) {
-    const card = document.getElementById(`review-${imageId}`);
-    if (card) {
-        card.remove();
-        updateReviewCount();
+/**
+ * Fetch all products waiting for approval from the database
+ */
+async function fetchDiscoveredProducts() {
+    try {
+        const { data, error } = await supabase
+            .from('products')
+            .select('*')
+            .eq('business_id', businessId)
+            .eq('status', 'discovered')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data || [];
+    } catch (err) {
+        console.error('[ApprovalStudio] Error fetching discovered products:', err);
+        alert('Could not load products for approval. Check console for details.');
+        return [];
     }
 }
 
-// Live Database Publishing
-async function publishProduct(imageId) {
-    const card = document.getElementById(`review-${imageId}`);
-    if (!card) return;
-    
-    const inputs = card.querySelectorAll('input, textarea');
-    const imgEl = card.querySelector('img');
-    
-    const productPayload = {
-        id: crypto.randomUUID(),
-        business_id: localStorage.getItem('current_business_id') || window.currentBusinessId,
-        title: inputs[0].value,
-        description: inputs[1].value,
-        product_type: inputs[2].value, // Category maps to product_type text field
-        price: parseFloat(inputs[3].value) || 0,
-        img: imgEl ? imgEl.src : '',
-        status: 'manual'
-    };
-    
-    if (!productPayload.title.trim()) {
-        showNotification('Product name is required', 'error');
+/**
+ * Render the sleek card grid for rapid bulk editing
+ */
+function renderGrid() {
+    if (currentProducts.length === 0) {
+        gridContainer.innerHTML = '';
+        emptyState.style.display = 'flex';
+        bulkSaveBtn.style.display = 'none';
         return;
     }
+
+    emptyState.style.display = 'none';
+    bulkSaveBtn.style.display = 'flex';
+    bulkSaveBtn.innerHTML = `🚀 Approve & Publish ${currentProducts.length} Items`;
     
+    gridContainer.innerHTML = '';
+
+    currentProducts.forEach((product, index) => {
+        const card = document.createElement('div');
+        card.className = 'product-card bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all flex flex-col relative';
+        
+        const imageUrl = (product.images && product.images.length > 0) 
+            ? product.images[0] 
+            : 'https://via.placeholder.com/300x200?text=No+Image';
+
+        card.innerHTML = `
+            <div class="relative h-48 bg-gray-50 border-b border-gray-100 group">
+                <img src="${imageUrl}" class="w-full h-full object-cover" alt="Product Image" />
+                <div class="absolute top-3 right-3 bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full shadow-sm backdrop-blur-sm bg-opacity-90">
+                    Discovered ✨
+                </div>
+            </div>
+
+            <div class="p-5 flex-grow flex flex-col gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Product Title</label>
+                    <input type="text" data-index="${index}" data-field="title" value="${product.title || ''}" 
+                        class="w-full text-base font-semibold border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-2 px-3 bg-gray-50 hover:bg-white transition-colors" 
+                        placeholder="E.g. Luxury Leather Watch" />
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Price</label>
+                        <input type="number" data-index="${index}" data-field="price" value="${product.price || ''}" 
+                            class="w-full text-sm border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 py-2 px-3 bg-gray-50 hover:bg-white transition-colors" 
+                            placeholder="0.00" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Category</label>
+                        <input type="text" data-index="${index}" data-field="product_type" value="${product.product_type || ''}" 
+                            class="w-full text-sm border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 py-2 px-3 bg-gray-50 hover:bg-white transition-colors" 
+                            placeholder="E.g. Electronics" />
+                    </div>
+                </div>
+
+                <div class="flex-grow">
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Short Description</label>
+                    <textarea data-index="${index}" data-field="description_short" rows="3" 
+                        class="w-full text-sm border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 py-2 px-3 bg-gray-50 hover:bg-white transition-colors resize-none" 
+                        placeholder="Describe the product...">${product.description_short || ''}</textarea>
+                </div>
+            </div>
+
+            <div class="px-5 pb-5 pt-2 flex justify-between items-center border-t border-gray-50 mt-auto">
+                <span class="text-xs text-gray-400 font-mono">ID: ${product.handle || 'auto'}</span>
+                <button class="remove-btn text-red-500 hover:bg-red-50 text-sm font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-1" data-index="${index}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    Discard
+                </button>
+            </div>
+        `;
+        gridContainer.appendChild(card);
+    });
+
+    // Attach seamless live-edit listeners
+    gridContainer.querySelectorAll('input, textarea').forEach(input => {
+        input.addEventListener('input', handleInputChange);
+    });
+
+    // Attach discard listeners
+    gridContainer.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.addEventListener('click', handleDiscard);
+    });
+}
+
+/**
+ * Fires every time a user types, updating the state array instantly
+ */
+function handleInputChange(e) {
+    const index = e.target.dataset.index;
+    const field = e.target.dataset.field;
+    currentProducts[index][field] = e.target.value;
+}
+
+/**
+ * Discards a product from the grid (Also deletes from DB to keep it clean)
+ */
+async function handleDiscard(e) {
+    const index = e.target.dataset.index;
+    const product = currentProducts[index];
+    
+    const confirmDiscard = confirm("Discard this product? This cannot be undone.");
+    if (!confirmDiscard) return;
+    
+    // Attempt DB Deletion for cleanliness
+    if (product.id) {
+        try {
+            await supabase.from('products').delete().eq('id', product.id);
+        } catch (err) {
+            console.warn("Could not delete from DB instantly, removing from UI only.", err);
+        }
+    }
+
+    currentProducts.splice(index, 1);
+    renderGrid();
+}
+
+/**
+ * THE BIG BUTTON: Bulk updates all cards to 'approved' and triggers vectorization
+ */
+async function bulkApproveAndSave() {
+    if (currentProducts.length === 0) return;
+
+    // UI Feedback
+    bulkSaveBtn.innerHTML = `
+        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Publishing ${currentProducts.length} items...
+    `;
+    bulkSaveBtn.disabled = true;
+    bulkSaveBtn.classList.add('opacity-75', 'cursor-not-allowed');
+
     try {
-        const result = await productService.addProduct(productPayload);
+        // 1. Prepare the payload
+        const updates = currentProducts.map(p => ({
+            ...p,
+            price: parseFloat(p.price) || 0,
+            status: 'approved',           // CRITICAL: Moves it out of the studio
+            is_visible: true,
+            needs_polish: false,
+            updated_at: new Date().toISOString()
+        }));
+
+        // 2. Upsert to Supabase
+        const { error } = await supabase
+            .from('products')
+            .upsert(updates, { onConflict: 'id' });
+
+        if (error) throw error;
+
+        // 3. Trigger the Vectorization / Approval Webhook
+        fetch('https://your-backend-url.com/products/vectorize-approved', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ business_id: businessId }) 
+        }).catch(err => console.warn('Vectorization trigger delayed:', err));
+
+        // 4. Success UI
+        alert(`🎉 Success! ${currentProducts.length} products have been published.`);
         
-        if (!result.success) {
-            showNotification(`Error publishing: ${result.error}`, 'error');
-            return;
+        currentProducts = [];
+        renderGrid();
+
+    } catch (err) {
+        console.error('[ApprovalStudio] Bulk save failed:', err);
+        alert('Something went wrong while saving. Please try again.');
+    } finally {
+        // Reset button
+        if (bulkSaveBtn) {
+            bulkSaveBtn.innerHTML = `🚀 Approve & Publish All`;
+            bulkSaveBtn.disabled = false;
+            bulkSaveBtn.classList.remove('opacity-75', 'cursor-not-allowed');
         }
-        
-        showNotification('Product published successfully!', 'success');
-        removeReviewCard(imageId);
-        
-        // Signal products list view to reload next time it renders
-        if (typeof window.isInitialized !== 'undefined') {
-            window.isInitialized = false;
-        }
-    } catch (error) {
-        showNotification(`Error: ${error.message}`, 'error');
     }
 }
 
-// ==========================================
-// UI UPDATE HELPERS
-// ==========================================
-
-function updateReviewCount() {
-    const reviewContainer = document.getElementById('aiReviewContainer');
-    if (!reviewContainer) return;
-    const count = reviewContainer.querySelectorAll('.review-card-dashboard').length;
-    const countEl = document.getElementById('aiReviewCount');
-    if (countEl) countEl.textContent = count;
-}
-
-function updateProcessBtn() {
-    const btn = document.getElementById('aiProcessBtn');
-    if (btn) {
-        btn.disabled = window.imageQueue.length === 0 || window.processingInProgress;
+/**
+ * Utility to toggle UI states
+ */
+function showLoading(show) {
+    if (loadingState) loadingState.style.display = show ? 'flex' : 'none';
+    if (show) {
+        if (gridContainer) gridContainer.innerHTML = '';
+        if (emptyState) emptyState.style.display = 'none';
+        if (bulkSaveBtn) bulkSaveBtn.style.display = 'none';
     }
 }
-
-// ==========================================
-// UTILITY FUNCTIONS
-// ==========================================
-
-function formatFileSize(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-}
-
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `fixed bottom-4 right-4 px-6 py-3 rounded-xl text-sm font-bold shadow-lg text-white z-[200] transition-all animate-fade-in-up ${
-        type === 'success' ? 'bg-[#28A745]' :
-        type === 'error' ? 'bg-red-500' :
-        type === 'warning' ? 'bg-yellow-500' :
-        'bg-blue-500'
-    }`;
-    notification.textContent = message;
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.style.opacity = '0';
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
-}
-
-// Globals injection for inline HTML layout listeners
-window.removeFromQueue = removeFromQueue;
-window.startAiProcessing = startAiProcessing;
-window.removeReviewCard = removeReviewCard;
-window.publishProduct = publishProduct;
-
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes fade-in-up {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    .animate-fade-in-up { animation: fade-in-up 0.3s ease-out; }
-`;
-document.head.appendChild(style);

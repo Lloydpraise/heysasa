@@ -1,50 +1,24 @@
 /**
- * navigation.js — HeySasa! Navigation & Bootstrap
- *
- * Responsibilities (only these):
- *   1. Auth gate on every page switch
- *   2. Fetch + cache onboarding status once → window.onboardingData
- *   3. Route 'overview' — onboarding.js or overview.js self-register;
- *      nav just calls whatever render fn is in PAGE_CONFIG.overview
- *   4. Non-overview pages: pass through if complete or WA connected,
- *      otherwise show a step-specific gate screen
- *
- * PAGE REGISTRATION CONTRACT (every page module):
- *
- *   if (typeof window.PAGE_CONFIG !== 'undefined') {
- *     window.PAGE_CONFIG.myPage = {
- *       title:       'My Page',
- *       description: 'Short description.',
- *       navId:       'nav-my-page',
- *       render:      myRenderFunction   // direct reference, not a string
- *     };
- *   }
+ * navigation.js — HeySasa! Navigation & Bootstrap Gateway
  */
 
-// ─── Page registry ─────────────────────────────────────────────────────────────
 window.PAGE_CONFIG = {};
 
-// ─── Internal state ────────────────────────────────────────────────────────────
 let _currentPage          = null;
 let _debounceTimer        = null;
 let _onboardingFetched    = false;
 let _onboardingRetryCount = 0;
 const MAX_ONBOARDING_RETRIES = 5;
 
-// ─── Loader (Shimmer Skeleton) ─────────────────────────────────────────────────
-// Displays a non-blocking skeleton screen while content loads
 function _showLoader() {
+    console.log('[nav] _showLoader triggered. Rendering skeleton loader components into user layout space.');
     const el = document.getElementById('content-area');
     if (!el) {
-        console.warn('[Nav] _showLoader() skipped: #content-area not found.');
+        console.warn('[nav] _showLoader aborted: targeting container element #content-area context is missing.');
         return;
     }
     
-    console.log('[Nav] Showing loader screen.');
-    
-    // Reset element classes and ensure proper state
     el.className = 'w-full h-full p-4 md:p-8 overflow-y-auto custom-scrollbar absolute inset-0 z-10 opacity-100 pointer-events-auto';
-    
     el.innerHTML = `
         <style>
             @keyframes shimmer {
@@ -79,50 +53,62 @@ function _showLoader() {
         </div>`;
 }
 
-// ─── Onboarding gate for non-overview pages ────────────────────────────────────
-//
-// Returns 'pass_through' if the page should render normally (WA connected).
-// Otherwise renders a gate screen and returns undefined (caller must stop).
-//
 function _renderOnboardingGate(page) {
+    console.log('[nav] _renderOnboardingGate authorization check initiated for page route target:', page);
     const el = document.getElementById('content-area');
-    if (!el) return undefined;
+    if (!el) {
+        console.warn('[nav] _renderOnboardingGate aborted: target element container canvas #content-area is missing.');
+        return undefined;
+    }
 
     const d = window.onboardingData || {};
+    console.log('[nav] Onboarding gate memory context data parameters analysis:', d);
 
-    // WhatsApp connected = real data available even mid-onboarding → pass through
-    if (d.whatsapp_connected) return 'pass_through';
+    // WHATSAPP CONNECTED PASSCARD: If WhatsApp is up, everything opens up instantly
+    if (d.whatsapp_connected) {
+        console.log('[nav] Onboarding validation gate bypass success: WhatsApp connection channel is flagged active.');
+        return 'pass_through';
+    }
 
     const configs = {
         analytics: {
             iconBg: '#EFF6FF', iconColor: '#3B82F6',
             icon: '<svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>',
             title: 'Analytics unlock after WhatsApp connects',
-            desc: 'Once your WhatsApp is linked, your AI will analyse real conversation data and surface it here.',
+            desc: 'Once your WhatsApp is linked, your AI will analyze live conversation metrics and surface your insights here.',
             step: 2,
         },
         leads: {
             iconBg: '#F0FDF4', iconColor: '#22C55E',
             icon: '<svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
-            title: 'Your leads live here once WhatsApp is connected',
-            desc: 'Leads are pulled from your real WhatsApp conversations. Connect first and they will appear automatically.',
+            title: 'Your leads populate once WhatsApp is connected',
+            desc: 'Leads are pulled from your incoming WhatsApp conversations. Connect your account first to start tracking profiles.',
             step: 2,
         },
         products: {
             iconBg: '#FFFBEB', iconColor: '#F59E0B',
             icon: '<svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>',
-            title: 'Give Sasa your product info to start selling',
-            desc: 'Adding products lets your AI accurately pitch, price, and sell to customers in real-time.',
+            title: 'Provide product info to launch matching sync',
+            desc: 'Adding inventory lets your automated AI agent pitch context, display correct pricing, and confirm details dynamically.',
             step: 5,
         },
+        playground: {
+            iconBg: '#F5F3FF', iconColor: '#8B5CF6',
+            icon: '<svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>',
+            title: 'Playground unlocks with WhatsApp data stream',
+            desc: 'The conversational sandbox needs an active WhatsApp channel profile linked before simulation triggers can execute.',
+            step: 2,
+        }
     };
 
     const cfg = configs[page] || {
         iconBg: '#F1F5F9', iconColor: '#64748B', icon: '',
-        title: 'Complete setup to unlock this feature',
-        desc: 'Finish your onboarding steps to access this section.',
-        step: 1,
+        title: 'Complete Setup to Unlock',
+        desc: 'Finish your onboarding steps to open this page asset section.',
+        step: 2,
     };
+
+    console.log('[nav] Locking access to page section. Injecting structural lock constraint display screen config template parameters:', cfg);
 
     el.innerHTML =
         '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;' +
@@ -146,11 +132,13 @@ function _renderOnboardingGate(page) {
     return undefined;
 }
 
-// ─── Error fallback ────────────────────────────────────────────────────────────
 function _renderPageError(page, err) {
+    console.error(`[nav] _renderPageError caught terminal operational crash logic exception for route page section: [${page}]. Core stack trace info:`, err);
     const el = document.getElementById('content-area');
-    if (!el) return;
-    console.error('[Nav] Render error on "' + page + '":', err);
+    if (!el) {
+        console.warn('[nav] _renderPageError aborted: element layout canvas target container context pointer #content-area is absent.');
+        return;
+    }
     el.innerHTML =
         '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;' +
         'width:100%;height:100%;padding:48px;text-align:center;gap:16px;box-sizing:border-box;">' +
@@ -167,19 +155,19 @@ function _renderPageError(page, err) {
             '</div>' +
             '<button onclick="window.switchPage(\'' + page + '\')" ' +
                 'style="margin-top:16px;padding:12px 28px;border-radius:10px;background:#FFFFFF;color:#0F172A;' +
-                'font-size:14px;font-weight:600;border:1px solid #CBD5E1;cursor:pointer;" ' +
-                'onmouseover="this.style.background=\'#F8FAFC\';" ' +
-                'onmouseout="this.style.background=\'#FFFFFF\';">' +
+                'font-size:14px;font-weight:600;border:1px solid #CBD5E1;cursor:pointer;">' +
                 'Try Again' +
             '</button>' +
         '</div>';
 }
 
-// ─── Not-found fallback ────────────────────────────────────────────────────────
 function _renderNotRegistered(page) {
+    console.warn(`[nav] _renderNotRegistered caught navigation switch target request for an unregistered or unseeded page configuration module slot view reference: [${page}].`);
     const el = document.getElementById('content-area');
-    if (!el) return;
-    console.warn('[Nav] Page "' + page + '" not registered.');
+    if (!el) {
+        console.warn('[nav] _renderNotRegistered aborted: target container pointer layout slot element reference #content-area is absent.');
+        return;
+    }
     el.innerHTML =
         '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;' +
         'width:100%;height:100%;padding:48px;text-align:center;gap:16px;box-sizing:border-box;">' +
@@ -195,211 +183,235 @@ function _renderNotRegistered(page) {
         '</div>';
 }
 
-// ─── Auth gate ─────────────────────────────────────────────────────────────────
 function _enforceAuthentication() {
-    if (!localStorage.getItem('business_id')) {
-        console.warn('[Nav] No business_id — redirecting to login.');
+    const sessionToken = localStorage.getItem('session_id');
+    console.log('[nav] _enforceAuthentication verifying existence metric profile status parameters for key session_id. Present token state:', !!sessionToken);
+    if (!sessionToken) {
+        console.warn('[nav] No session token found inside user localStorage repository layout — redirecting execution context focus back to core login gateway index.html.');
         window.location.href = 'index.html';
         return false;
     }
     return true;
 }
 
-// ─── One-time onboarding status fetch ─────────────────────────────────────────
-// Returns true when onboarding status loaded, false when it should retry or cannot proceed.
 async function _loadOnboardingStatus() {
-    if (_onboardingFetched) {
-        console.log('[Nav] Onboarding status already fetched, skipping re-fetch.');
-        return true;
-    }
+    console.log('[nav] _loadOnboardingStatus script pass triggered. Previous execution lifecycle fetch check flag:', _onboardingFetched);
+    if (_onboardingFetched) return true;
 
-    const businessId = localStorage.getItem('business_id');
-    const client = window.getSupabase ? window.getSupabase() : null;
-
-    if (!businessId) {
-        console.warn('[Nav] No business_id found; cannot load onboarding status.');
-        return false;
-    }
-
+    const client = window.supabaseClient || (window.getSupabase ? window.getSupabase() : null);
     if (!client) {
-        _onboardingRetryCount += 1;
-        console.warn('[Nav] Supabase client unavailable. Retry', _onboardingRetryCount, 'of', MAX_ONBOARDING_RETRIES, 'diagnostics:', window.supabaseInitDiagnostics);
+        _onboardingRetryCount++;
+        console.warn(`[nav] Supabase driver link connection client context absent from window instance storage repository memory layer stack slot. Triggering loop retry block count: ${_onboardingRetryCount} of ${MAX_ONBOARDING_RETRIES}`);
         if (_onboardingRetryCount <= MAX_ONBOARDING_RETRIES) {
-            await new Promise(resolve => setTimeout(resolve, 200));
+            await new Promise(r => setTimeout(r, 200));
             return _loadOnboardingStatus();
         }
-        console.error('[Nav] Supabase client unavailable after maximum retries.', window.supabaseInitDiagnostics);
+        console.error('[nav] Supabase structural initialization loop resolution failed after hitting ceiling constraint boundary parameter limits.');
         return false;
     }
 
     _onboardingRetryCount = 0;
 
-    console.log('[Nav] Loading onboarding status for businessId:', businessId, 'with Supabase client.', {
-        diagnostics: window.supabaseInitDiagnostics,
-        hasOnboardingData: !!window.onboardingData,
-    });
-
     try {
-        var result = await client
-            .from('business_onboarding')
-            .select('*')
-            .eq('business_id', businessId)
-            .maybeSingle();
+        console.log('[nav] Dispatching Supabase client authentication query to verify active system user profile status schema state.');
+        const { data: { user } } = await client.auth.getUser();
+        console.log('[nav] User query result payload meta returned successfully:', user ? `Email: ${user.email} (ID: ${user.id})` : 'Null/Absent User context');
+        if (!user) return false;
 
-        var data  = result.data;
-        var error = result.error;
+        // Ensure business record placeholder is located or set up
+        console.log(`[nav] Checking business ledger tracking table registries for entry associated with user identifier trace link: ${user.id}`);
+        let { data: biz } = await client.from('businesses').select('id').eq('user_id', user.id).maybeSingle();
+        
+        if (!biz) {
+            const fallbackUrl = localStorage.getItem('onboarding_target_url') || 'https://heysasa.com/placeholder';
+            console.log(`[nav] Business entity row entry absent. Triggering automated fallback database construction insertion sequence with website_url: ${fallbackUrl}`);
+            const { data: newBiz } = await client.from('businesses')
+                .insert({ user_id: user.id, website_url: fallbackUrl, company_name: user.email.split('@')[0], status: 'pending' })
+                .select().single();
+            biz = newBiz;
+            console.log('[nav] Newly inserted backup structural placeholder business entry record generated data entity:', biz);
+        }
 
-        if (!data && !error) {
-            // New user — create a fresh row
-            console.log('[Nav] No onboarding row found for businessId:', businessId, 'creating fresh row.');
-            var insertResult = await client
-                .from('business_onboarding')
-                .insert({ business_id: businessId, current_step: 1, onboarding_complete: false })
-                .select()
-                .single();
+        if (!biz?.id) {
+            console.error('[nav] Critical validation interruption anomaly: Resolved business data entry reference object structure block is corrupted or missing tracking id.');
+            return false;
+        }
+        
+        const bId = biz.id;
+        console.log('[nav] Synchronized business entity tracking token mapped to active application instance state storage registry:', bId);
+        localStorage.setItem('business_id', bId);
+
+        console.log(`[nav] Querying client table entry configuration for business_onboarding linked to business tracking key: ${bId}`);
+        let result = await client.from('business_onboarding').select('*').eq('business_id', bId).maybeSingle();
+        let data = result.data;
+        if (result.error) console.error('[nav] Supabase selection error trace returned during validation checkout of onboarding data step entity registry:', result.error);
+
+        if (!data && !result.error) {
+            console.log('[nav] Onboarding data tracking state matrix records row entity missing from table database slot. Emitting initial row initialization transaction values.');
+            const insertResult = await client.from('business_onboarding')
+                .insert({ business_id: bId, current_step: 1, onboarding_complete: false })
+                .select().single();
             data = insertResult.data;
-            error = insertResult.error || error;
+            console.log('[nav] Fresh initial database record instantiation setup for onboarding status row entity complete:', data);
         }
 
-        if (error) {
-            console.error('[Nav] Onboarding fetch returned error:', error, 'diagnostics:', window.supabaseInitDiagnostics);
-        }
-if (data) {
+        if (data) {
+            console.log('[nav] Assigning processed workflow metrics data reference array directly to window.onboardingData globally:', data);
             window.onboardingData = data;
             _onboardingFetched = true;
-            console.log('[Nav] Onboarding loaded — step:', data.current_step,
-                        '| complete:', data.onboarding_complete,
-                        '| wa:', data.whatsapp_connected);
             return true;
         }
-
-        // FIXED: Set to false so the application will retry fetching if it fails
-        _onboardingFetched = false;
-        console.warn('[Nav] Onboarding fetch returned no data for businessId:', businessId, 'diagnostics:', window.supabaseInitDiagnostics);
         return false;
     } catch (err) {
-        console.error('[Nav] Failed to load onboarding status:', err, 'diagnostics:', window.supabaseInitDiagnostics);
+        console.error('[nav] Status loading error caught critical thread process interruption logic crash validation sequence trace exception:', err);
         return false;
     }
 }
 
-// ─── Core switch function ──────────────────────────────────────────────────────
 window.switchPage = function(page) {
-    if (_debounceTimer) clearTimeout(_debounceTimer);
-
-    _debounceTimer = setTimeout(function() {
-        _runSwitch(page);
+    console.log(`[nav] window.switchPage global trigger listener sequence mapped for page key target reference route: [${page}]`);
+    if (_debounceTimer) {
+        console.log('[nav] Debounce interaction shift detected. Resetting scheduling interval timeouts.');
+        clearTimeout(_debounceTimer);
+    }
+    _debounceTimer = setTimeout(function() { 
+        console.log(`[nav] Debounce execution buffer window complete. Routing internal page shift task command over to runtime compiler loop for target page view: [${page}]`);
+        _runSwitch(page); 
     }, 150);
 };
 
-// Separated so the async logic is properly awaited inside its own function,
-// not trapped inside a setTimeout callback where await has no effect on callers.
 async function _runSwitch(page) {
-    if (!_enforceAuthentication()) return;
+    console.log(`[nav] _runSwitch processing sequence loop evaluation initiated for target page: [${page}]`);
+    if (!_enforceAuthentication()) {
+        console.warn('[nav] _runSwitch runtime process aborted: credential validation check failed user token profile is missing.');
+        return;
+    }
 
-    // Block until onboarding status is in memory
     const onboardingReady = await _loadOnboardingStatus();
+    console.log(`[nav] Runtime synchronization status check overview for onboarding dependency database state engine metrics context: ${onboardingReady}`);
+    
     if (!onboardingReady) {
-        console.warn('[Nav] Onboarding status not ready; deferring page render until Supabase client becomes available.');
         if (_onboardingRetryCount <= MAX_ONBOARDING_RETRIES) {
-            setTimeout(function() {
-                console.log('[Nav] Retrying switchPage for', page);
-                window.switchPage(page);
-            }, 300);
+            console.warn(`[nav] App layer bootstrap data is still loading or unready. Deferring layout compilation render execution loop sequence back into stack queue scheduler loop for page: [${page}]`);
+            setTimeout(function() { window.switchPage(page); }, 300);
         } else {
-            _renderPageError(page, new Error('Unable to initialize Supabase client after retries.'));
+            console.error('[nav] Aborting view route resolution thread sequence. Target dependency structural mapping layer initialization hit a ceiling failure threshold.');
+            _renderPageError(page, new Error('Initialization failure.'));
         }
         return;
     }
 
-    var businessId = localStorage.getItem('business_id');
+    const businessId = localStorage.getItem('business_id');
+    console.log(`[nav] Executing switch layout pass sequence for active client context business identifier string code: ${businessId}`);
 
-    console.log('[Nav] switching to:', page, '| businessId:', businessId);
-    console.log('[Nav] current onboardingData:', window.onboardingData);
+    console.log('[nav] Cleaning active status navigation links highlights from document layout element arrays.');
+    document.querySelectorAll('[id^="nav-"]').forEach(el => el.classList.remove('active'));
+    
+    const config = window.PAGE_CONFIG[page];
+    console.log(`[nav] Resolving mapped PAGE_CONFIG object metadata for requested router page component instance [${page}]:`, config);
+    
+    const navIdTargetKey = (config && config.navId) ? config.navId : ('nav-' + page);
+    const navEl = document.getElementById(navIdTargetKey);
+    if (navEl) {
+        console.log(`[nav] Sidebar sidebar element hook match confirmed. Applying active focus toggle style classes onto DOM node identifier: #${navIdTargetKey}`);
+        navEl.classList.add('active');
+    } else {
+        console.log(`[nav] Sidebar element element identifier hook missed or absent for targeting attribute container node: #${navIdTargetKey}`);
+    }
 
-    // ── 1. Nav highlight ──────────────────────────────────────────────────────
-    document.querySelectorAll('[id^="nav-"]').forEach(function(el) {
-        el.classList.remove('active');
-    });
+    const titleEl = document.getElementById('section-title');
+    const descEl  = document.getElementById('section-description');
+    if (titleEl) {
+        titleEl.textContent = (config && config.title) ? config.title : (page.charAt(0).toUpperCase() + page.slice(1));
+    }
+    if (descEl) {
+        descEl.textContent  = (config && config.description) ? config.description : '';
+    }
 
-    var config = window.PAGE_CONFIG[page];
-    var navId  = (config && config.navId) ? config.navId : ('nav-' + page);
-    var navEl  = document.getElementById(navId);
-    if (navEl) navEl.classList.add('active');
-
-    // ── 2. Header text ────────────────────────────────────────────────────────
-    var titleEl = document.getElementById('section-title');
-    var descEl  = document.getElementById('section-description');
-    if (titleEl) titleEl.textContent = (config && config.title) ? config.title : (page.charAt(0).toUpperCase() + page.slice(1));
-    if (descEl)  descEl.textContent  = (config && config.description) ? config.description : '';
-
-    // ── 3. Show loader ────────────────────────────────────────────────────────
     _showLoader();
     _currentPage = page;
-    console.log('[Nav] Loader active for page:', page);
 
-    // ── 4. Overview — always allowed, render fn decided by load order ─────────
-    //    onboarding.js registers first; overview.js overwrites when complete.
+    // Overview routes directly to onboarding workflow wizard view if incomplete
     if (page === 'overview') {
-        console.log('[Nav] Overview page selected. PAGE_CONFIG.overview:', config);
+        console.log('[nav] Special routing mapping exception tracking match found: processing routing logic conditions rule check for page view section: overview');
         if (!config || typeof config.render !== 'function') {
-            console.error('[Nav] PAGE_CONFIG.overview missing or render fn unavailable.');
             _renderNotRegistered(page);
             return;
         }
-        try {
-            console.log('[Nav] Invoking overview render function.');
-            await config.render(businessId);
-        } catch (err) {
-            _renderPageError(page, err);
+        try { 
+            console.log(`[nav] Invoking render function for overview page section config with businessId context: ${businessId}`);
+            await config.render(businessId); 
+        } catch (err) { 
+            _renderPageError(page, err); 
         }
         return;
     }
 
-    // ── 5. Non-overview: onboarding gate ──────────────────────────────────────
-    var isComplete = window.onboardingData && window.onboardingData.onboarding_complete === true;
-
-    if (!isComplete) {
-        console.log('[Nav] Onboarding incomplete; rendering gate for page:', page);
-        var gateResult = _renderOnboardingGate(page);
-        if (gateResult !== 'pass_through') {
-            console.log('[Nav] Gate screen displayed for page:', page, '— stopping render.');
-            return; // gate rendered, stop here
+    // EXEMPT PREFERENCES PAGE: Passes straight through to query database records
+    if (page === 'preferences') {
+        console.log('[nav] Special routing layout permission exception bypass mapping detected: processing bypass pass-through rule check matching target element section section: preferences');
+        if (!config || typeof config.render !== 'function') {
+            _renderNotRegistered(page);
+            return;
         }
-        console.log('[Nav] Onboarding gate passed for page:', page);
+        try { 
+            console.log(`[nav] Invoking render function for preferences page module with businessId context: ${businessId}`);
+            await config.render(businessId); 
+        } catch (err) { 
+            _renderPageError(page, err); 
+        }
+        return;
     }
 
-    // ── 6. Registered render function ────────────────────────────────────────
-    console.log('[Nav] Rendering page with registered config:', page, config);
+    // GATED DATA SECTIONS: Block leads, analytics, products, playground if whatsapp is offline
+    const isComplete = window.onboardingData && window.onboardingData.onboarding_complete === true;
+    console.log(`[nav] Evaluating gated asset authorization conditions rule matching boundaries. Onboarding complete metric status tracking parameter value: ${isComplete}`);
+    
+    if (!isComplete) {
+        console.log(`[nav] Onboarding is incomplete. Evaluating access gate for page section: [${page}]`);
+        const gateResult = _renderOnboardingGate(page);
+        console.log(`[nav] Access gate resolution loop check logic returned response calculation output token string: ${gateResult}`);
+        if (gateResult !== 'pass_through') {
+            console.warn(`[nav] Route access request denied. Authorization gate script successfully intercepted navigation transition context to block view render flow for: [${page}]`);
+            return; 
+        }
+    }
+
     if (!config || typeof config.render !== 'function') {
-        console.error('[Nav] Page render aborted because PAGE_CONFIG.' + page + ' is not registered or render is not a function.');
         _renderNotRegistered(page);
         return;
     }
 
     try {
+        console.log(`[nav] Executing standard module custom compilation layout render callback stream for target asset section: [${page}] using businessId: ${businessId}`);
         await config.render(businessId);
     } catch (err) {
         _renderPageError(page, err);
     }
 }
 
-// ─── Boot ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async function() {
-    if (!_enforceAuthentication()) return;
-
-    // Fetch onboarding status eagerly so it is ready before first switchPage
+    console.log('[nav] DOMContentLoaded cycle process broadcast event detected. Initializing shell system application entry gateway bootstrap operations.');
+    
+    if (!_enforceAuthentication()) {
+        console.warn('[nav] DOMContentLoaded bootstrap flow terminated. Session identification authorization clearance validation check failed.');
+        return;
+    }
+    
+    console.log('[nav] Bootstrapping background application data metrics initialization layers.');
     await _loadOnboardingStatus();
 
-    // Wire sidebar nav clicks
-    document.querySelectorAll('[id^="nav-"]').forEach(function(item) {
+    console.log('[nav] Attaching dynamic live element event click click interaction intercept listeners over sidebar menu navigation link button elements arrays.');
+    document.querySelectorAll('[id^="nav-"]').forEach(item => {
         item.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            window.switchPage(item.id.replace('nav-', ''));
+            const targetPageNameStringCode = item.id.replace('nav-', '');
+            console.log(`[nav] Navigation link sidebar click action captured. Extracting target view state reference index from element element ID: #${item.id} -> Mapped component page route: [${targetPageNameStringCode}]`);
+            window.switchPage(targetPageNameStringCode);
         });
     });
 
-    console.log('[Nav] Ready.');
+    console.log('[nav] Initial initialization sequence configuration routine check loop completely setup. Defaulting layout viewport mapping back onto core root home page section: overview');
     window.switchPage('overview');
 });

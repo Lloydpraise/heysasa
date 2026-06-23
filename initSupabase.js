@@ -22,10 +22,13 @@ function _createSupabaseClient() {
         // Check if the global UMD script is loaded
         if (typeof window.supabase !== 'undefined' && typeof window.supabase.createClient === 'function') {
             _supabaseInstance = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            
-            // Map to EVERY possible variable name your other JS files might be using
+
+            // Expose the created client under a stable name used across the app.
+            // IMPORTANT: do NOT overwrite the library object at `window.supabase` —
+            // some pages rely on the original library being present for diagnostics
+            // or future createClient calls. Only bind the client instance to
+            // `window.supabaseClient` (and keep getSupabase() as the canonical accessor).
             window.supabaseClient = _supabaseInstance;
-            window.supabase = _supabaseInstance; 
             
             window.supabaseInitDiagnostics = {
                 status: 'initialized',

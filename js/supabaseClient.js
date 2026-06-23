@@ -8,9 +8,11 @@
  * @returns {string|null} The short business_id or null if not onboarded
  */
 window.getActiveBusinessId = () => {
-    const id = localStorage.getItem('sb_business_id');
+    // Most modules use `business_id` in localStorage; older helper used `sb_business_id`.
+    // Read `business_id` first for compatibility, then fall back to the legacy key.
+    const id = localStorage.getItem('business_id') || localStorage.getItem('sb_business_id');
     if (!id) {
-        console.warn("[Context Warning] Active business_id requested but none found in storage.");
+        console.warn('[Context Warning] Active business_id requested but none found in storage.');
     }
     return id;
 };
