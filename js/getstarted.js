@@ -181,7 +181,7 @@
                 password: password,
             });
 
-            if (!signUpRes.success) {
+            if (signUpError) {
                 if (btn) { btn.textContent = 'Create Account'; btn.disabled = false; }
 
                 // Supabase doesn't expose "already registered" directly for security,
@@ -194,7 +194,7 @@
                 return;
             }
 
-            if (signUpRes.data?.user?.identities?.length === 0) {
+            if (signUpData?.user?.identities?.length === 0) {
                 if (btn) { btn.textContent = 'Create Account'; btn.disabled = false; }
                 notify('This email is already registered. Please check your email and password or sign in instead.');
                 setTimeout(() => { window.location.href = 'login.html'; }, 2000);
@@ -203,8 +203,7 @@
 
             if (btn) btn.textContent = 'Sending code…';
 
-            const otpRes = await getAuth().signInWithOtp(currentEmail);
-
+               const { data: otpData, error: otpError } = await getAuth().signInWithOtp({ email: currentEmail });
             if (btn) { btn.textContent = 'Create Account'; btn.disabled = false; }
 
             if (otpError) {
