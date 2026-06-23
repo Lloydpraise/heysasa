@@ -103,40 +103,42 @@ let editingFollowupId       = null;
 let leadsFetchRequestId     = 0;
 let leadsFetchRetryCount    = 0;
 
-async function loadLiveLeads() {
-  if (!window.leadsService || typeof window.leadsService.fetchLiveLeads !== 'function') {
-    console.warn('[Leads] leadsService is not ready yet. Retrying shortly.');
-    if (leadsFetchRetryCount < 5) {
-      leadsFetchRetryCount += 1;
-      setTimeout(loadLiveLeads, 120);
+function waitForBusinessId() {
+    return new Promise((resolve) => {
+        const check = setInterval(() => {
+            const id = localStorage.getItem('business_id');
+            if (id) {
+                clearInterval(check);
+                console.log("[Leads] business_id detected.");
+                resolve(id);
+            }
+        }, 300);
+        
+        setTimeout(() => {
+             const id = localStorage.getItem('business_id');
+             if(id) return;
+             clearInterval(check);
+             console.error("[Leads] Timed out waiting for business_id.");
+        }, 10000);
+    });
+}
+
+// ─── Main Load Function ──────────────────────────────────────────────────────
+async function loadLiveLeads(businessId) {
+    if (!businessId) return;
+
+    try {
+        const data = await window.leadsService.fetchLiveLeads(businessId);
+        if (data === null) {
+            console.warn("[Leads] fetchLiveLeads returned null.");
+            return;
+        }
+        leadsData = data;
+        console.log("[Leads] Data loaded successfully.");
+        // ... proceed with your render logic ...
+    } catch (err) {
+        console.error("[Leads] Error fetching leads:", err);
     }
-    return null;
-  }
-
-  const requestId = ++leadsFetchRequestId;
-
-  try {
-    const liveData = await window.leadsService.fetchLiveLeads();
-
-    if (requestId !== leadsFetchRequestId) {
-      // A newer load request started while this one was pending.
-      return null;
-    }
-
-    if (Array.isArray(liveData)) {
-      leadsData = liveData;
-    } else {
-      console.warn('[Leads] fetchLiveLeads returned unexpected data:', liveData);
-      leadsData = [];
-    }
-
-    if (typeof renderLeads === 'function') renderLeads();
-    if (typeof initDashboard === 'function') initDashboard();
-    return leadsData;
-  } catch (error) {
-    console.error('Error loading live leads:', error);
-    return null;
-  }
 }
 
 // Run the fetch immediately when the page loads
@@ -2109,3 +2111,4 @@ function refreshApprovalDrawer() {
   rerenderAll();
   openApprovalDrawer();
 }
+

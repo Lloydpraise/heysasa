@@ -6,9 +6,11 @@
  * card grid, and bulk-upserts them to status='approved'.
  */
 
-import { supabase } from './supabaseClient.js'; 
 
-// --- GLOBAL STATE ---
+    const { data, error } = await supabase
+        .from('products')
+        .insert([productData]);
+}
 let currentProducts = [];
 let businessId = localStorage.getItem('business_id') || ''; 
 
@@ -23,7 +25,7 @@ let emptyState    = null;
  * @param {string} targetContainerId - The ID of the div in dashboard.html where this view should load.
  * @param {Array} preloadedProducts - Optional array of products if redirecting from manual upload.
  */
-export async function initApprovalStudio(targetContainerId = 'main-content', preloadedProducts = null) {
+window.initApprovalStudio = async function(targetContainerId = 'main-content', preloadedProducts = null) {
     if (!businessId) {
         console.error("No Business ID found in local storage.");
         return;
@@ -307,3 +309,4 @@ function showLoading(show) {
         if (bulkSaveBtn) bulkSaveBtn.style.display = 'none';
     }
 }
+

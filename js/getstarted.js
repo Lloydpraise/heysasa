@@ -203,7 +203,9 @@
 
             if (btn) btn.textContent = 'Sending code…';
 
-               const { data: otpData, error: otpError } = await getAuth().signInWithOtp({ email: currentEmail });
+            const result = await getAuth().signInWithOtp(currentEmail);
+            const otpError = result.error;
+            const otpData = result.data;
             if (btn) { btn.textContent = 'Create Account'; btn.disabled = false; }
 
             if (otpError) {
